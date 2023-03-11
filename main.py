@@ -1,14 +1,14 @@
-
-
-motors = {
-    
-}
+import math
+import chassis
+import path
 
 def autonomous_setup():
-    pass
+    global testChassis = chassis.TestChassis(0)
+    testChassis.turn(math.radians(45))
+    # testChassis.move(path.Path())
 
 def autonomous_main():
-    pass
+    testChassis.update()
 
 def teleop_setup():
     pass

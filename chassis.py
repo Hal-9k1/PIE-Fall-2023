@@ -1,56 +1,44 @@
-class Motor:
-    __slots__ = "_controller", "_motor"
-    def __init__(self, controller_id, motor):
-        self._controller = controller
-        self._motor = motor
-    
-    def invert(self):
-        self._set("invert", True)
-        return self
-    def set_deadband(self, deadband):
-        self._set("deadband", deadband)
-        return self
-    def set_pid(self, pid_tuple):
-        if pid[0]:
-            self._set("pid_kp", pid[0])
-        if pid[1]:
-            self._set("pid_ki", pid[1])
-        if pid[2]:
-            self._set("pid_kd", pid[2])
-        return self
-    def set_velocity(self, velocity):
-        self._set("velocity", velocity)
-        return self
-    def get_velocity(self):
-        return self._get("velocity")
-    def set_encoder(self, enc_value):
-        self._set("enc", enc_value)
-        return self
-    def get_encoder(self, enc_value):
-        return self._get("enc")
-    
-    def _set(self, key, value):
-        Robot.set_value(self._controller, key + "_" + self._motor, value)
-    def _get(self, key):
-        return Robot.get_value(self._controller, key + "_" + self._motor)
+import math
+import devices
+import path
 
-class TestChassis(Chassis):
-    """Test chassis for piemultator.pierobotics.org."""
-    _motors = {
+class TestChassis:
+    """Test chassis for pimulator.pierobotics.org."""
+    __slots__ = "__wheels", "__angle", "__queue"
+    __motors = {
         left = Motor("koala_bear", "a"),
         right = Motor("koala_bear", "b").invert()
     }
+    __wheels = {
+        left = Wheel(__motors.left, 0.5, 8),
+        right = Wheel(__motors.right, 0.5, 8)
+    }
     
-    def __init__(self, navigator):
-        self._navigator = navigator
-        self._queue = []
+    def __init__(self, starting_angle):
+        self.__queue = []
+        self.__angle = starting_angle
+    
     def move(self, path):
-        """Moves the chassis along an arc."""
-        pass
+        """Autonomous mode only. Moves the chassis along a path."""
+        self.__queue.append((self.__update_move, path))
     def orient(self, angle):
-        """Rotates the chassis in place."""
-        pass
+        """Autonomous mode only. Rotates the chassis in place to align with the given angle."""
+        self.turn(angle - self.__angle)
+    def turn(self, angle):
+        """Autonomous mode only. Rotates the chassis in place by the given angle."""
+        self.__queue.append((self.__update_turn, angle))
     def update(self):
-        """Updates state and motor powers."""
-        # Calculate current position from encoders and send to navigator.
+        """Autonomous mode only. Updates state and motor powers."""
+        if self.__queue:
+            if not self.__queue[0][0](self.__queue[0][1]):
+                self.__queue.pop(0)
+        _wheels.left.update()
+        _wheels.right.update()
+    def input(self, strength):
+        """Teleop mode only. """
+        pass
+    
+    def __update_move(self, path):
+        pass
+    def __update_turn(self, angle):
         pass
