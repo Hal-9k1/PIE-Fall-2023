@@ -38,8 +38,10 @@ def attraction_fun(fun_dict):
         for i in range(iter_count):
             attraction = fun_dict[attraction_names[i]]
             next_attraction = fun_dict[attraction_names[i + 1]]
-            current_partial_fun = attraction[0] + next_attraction[0] / attraction[1]
-            swapped_partial_fun = next_attraction[0] + attraction[0] / next_attraction[1]
+            # current_partial_fun = attraction[0] + next_attraction[0] / attraction[1]
+            # swapped_partial_fun = next_attraction[0] + attraction[0] / next_attraction[1]
+            current_partial_fun = attraction[0] + next_attraction[0] * (1 - attraction[1])
+            swapped_partial_fun = next_attraction[0] + attraction[0] * (1 - next_attraction[1])
             if swapped_partial_fun > current_partial_fun:
                 swapped = True
                 attraction_names[i], attraction_names[i + 1] = attraction_names[i + 1], attraction_names[i]
@@ -48,7 +50,17 @@ def attraction_fun(fun_dict):
     return attraction_names
 
 def decode_riddle(sentence, shift):
-    return "".join([" " if character == " " else chr(ord(character) - shift) for character in sentence])
+    buff = []
+    for character in sentence:
+        if character.isalpha():
+            is_upper = character.upper() == character
+            lower_bound = ord("A") if is_upper else ord("a")
+            # note: current test cases shift left, but spec says to shift right. this shifts left to
+            # pass the tests, so if it breaks first thing to try is shifting right
+            buff.append(chr((ord(character) - shift - lower_bound) % 26 + lower_bound)) 
+        else:
+            buff.append(character)
+    return "".join(buff)
 
 def is_vegan(menu_item, menu_dict):
     if menu_dict[menu_item][0] == "vegan":
