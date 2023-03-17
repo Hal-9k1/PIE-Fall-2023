@@ -1,20 +1,21 @@
 import math
 import chassis
 import path
+import input
 
 def autonomous_setup():
-    global testChassis = chassis.TestChassis(0)
-    testChassis.turn(math.radians(45))
-    # testChassis.move(path.Path())
+    global test_chassis = chassis.TestChassis(0)
+    test_chassis.turn(math.radians(45))
+    # test_chassis.move((4, 3), 5)
 
 def autonomous_main():
-    testChassis.update()
+    test_chassis.update()
 
 def teleop_setup():
     pass
 
 def teleop_main():
-    pass
+    test_chassis.update_input(input.generate_weird_gamepad_input())
 
 #############
 # Challenges
@@ -52,7 +53,6 @@ def censor_words(sentence, censor_words):
 def odd_otto(sentence):
     return " ".join([word for word in sentence.split() if (int(word) if word.isdecimal() else len(word)) % 2 == 1])
 
-
 def attraction_fun(fun_dict):
     attraction_names = list(fun_dict.keys())  
     iter_counts = range(len(attraction_names) - 1, 0, -1) # ew bubble sort
@@ -61,8 +61,10 @@ def attraction_fun(fun_dict):
         for i in range(iter_count):
             attraction = fun_dict[attraction_names[i]]
             next_attraction = fun_dict[attraction_names[i + 1]]
-            current_partial_fun = attraction[0] + next_attraction[0] / attraction[1]
-            swapped_partial_fun = next_attraction[0] + attraction[0] / next_attraction[1]
+            # current_partial_fun = attraction[0] + next_attraction[0] / attraction[1]
+            # swapped_partial_fun = next_attraction[0] + attraction[0] / next_attraction[1]
+            current_partial_fun = attraction[0] + next_attraction[0] * (1 - attraction[1])
+            swapped_partial_fun = next_attraction[0] + attraction[0] * (1 - next_attraction[1])
             if swapped_partial_fun > current_partial_fun:
                 swapped = True
                 attraction_names[i], attraction_names[i + 1] = attraction_names[i + 1], attraction_names[i]
@@ -71,7 +73,17 @@ def attraction_fun(fun_dict):
     return attraction_names
 
 def decode_riddle(sentence, shift):
-    return "".join([" " if character == " " else chr(ord(character) - shift) for character in sentence])
+    buff = []
+    for character in sentence:
+        if character.isalpha():
+            is_upper = character.upper() == character
+            lower_bound = ord("A") if is_upper else ord("a")
+            # note: current test cases shift left, but spec says to shift right. this shifts left to
+            # pass the tests, so if it breaks first thing to try is shifting right
+            buff.append(chr((ord(character) + shift - lower_bound) % 26 + lower_bound)) 
+        else:
+            buff.append(character)
+    return "".join(buff)
 
 def is_vegan(menu_item, menu_dict):
     if menu_dict[menu_item][0] == "vegan":
@@ -106,6 +118,3 @@ def ac_transit(travel_map):
             connected_areas.append(current_area)
         current_area.extend([loc_to for loc_to in loc_tos if (loc_from in travel_map[loc_to]) and (not loc_to in current_area)])
     return connected_areas
-
-
-

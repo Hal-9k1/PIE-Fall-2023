@@ -57,7 +57,7 @@ def decode_riddle(sentence, shift):
             lower_bound = ord("A") if is_upper else ord("a")
             # note: current test cases shift left, but spec says to shift right. this shifts left to
             # pass the tests, so if it breaks first thing to try is shifting right
-            buff.append(chr((ord(character) - shift - lower_bound) % 26 + lower_bound)) 
+            buff.append(chr((ord(character) + shift - lower_bound) % 26 + lower_bound)) 
         else:
             buff.append(character)
     return "".join(buff)
