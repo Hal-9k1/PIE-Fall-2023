@@ -15,17 +15,17 @@ def total_cost(adults, children):
 
 def censor_words(sentence, censor_words):
     decap_words = [word.lower() for word in censor_words]
-    buffer = []
+    buff = []
     for word in sentence.split():
         censored = False
         for censor_word in decap_words:
             if word.lower().startswith(censor_word):
-                buffer.append("****" + word[len(censor_word):])
+                buff.append("****" + word[len(censor_word):])
                 censored = True
                 break
         if not censored:
-            buffer.append(word)
-    return " ".join(buffer)
+            buff.append(word)
+    return " ".join(buff)
 
 def odd_otto(sentence):
     return " ".join([word for word in sentence.split() if (int(word) if word.isdecimal() else len(word)) % 2 == 1])

@@ -53,6 +53,3 @@ class Wheel:
         delta = self.__goal_pos - self.__motor.get_encoder()
         if self.get_goal_progress() >= 1:
             self.__motor.set_velocity(0)
-
-class Input:
-    __slots__ = "__"
