@@ -2,7 +2,7 @@ class Motor:
     """Wraps a KoalaBear-controlled motor."""
     __slots__ = "_controller", "_motor"
     def __init__(self, controller_id, motor):
-        self._controller = controller
+        self._controller = controller_id
         self._motor = motor
     
     def invert(self):

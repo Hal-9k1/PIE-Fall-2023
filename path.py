@@ -36,7 +36,7 @@ class Path:
                 return (a_x, c_y)
             else:
                 x = (((a_x - b_x) / (b_y - a_y) * c_x - c_y + (a_y - b_y) / (b_x - a_x) * a_x + a_y)
-                    / ((a_x - b_x) / (b_y - a_y) + (a_y - b_y) / (b_x - a_x))
+                    / ((a_x - b_x) / (b_y - a_y) + (a_y - b_y) / (b_x - a_x)))
                 y = (b_y - a_y) / (b_x - a_x) * x + (a_y - b_y) / (b_x - b_y) * a_x + a_y
                 return (x, y)
         else:
