@@ -3,12 +3,12 @@ import math
 class Path:
     __slots__ = "__angle", "__start_pos", "__end_pos", "__pivot", "__radius", "__start_theta"
     def __init__(self, start_pos, end_pos, angle):
-        # angle is in radians. negative is counterclockwise.
+        # Angle is in radians. negative is counterclockwise.
         self.__angle = angle
         self.__start_pos = start_pos
         self.__end_pos = end_pos
         if angle != 0:
-            # if angle is 0 the path is a line
+            # If angle is 0 the path is a line
             self.__calculate_arc_details()
     
     def dist_to_point(self, dist):
@@ -58,17 +58,17 @@ class Path:
         # let c be the midpoint of segment ab
         c_x = (a_x + b_x) / 2
         c_y = (a_y + b_y) / 2
-        # selector determines which pivot (there are two possible) to pick
+        # Selector determines which pivot (there are two possible) to pick
         selector = 1 if self.__angle > 0 else -1
         if b_y == a_y:
-            # special case, calculating m_cp would divide by zero
+            # Special case, calculating m_cp would divide by zero
             p_x = c_x
             p_y = c_y + selector * l
         else:
             # let m_cp be the slope of segment cp
             m_cp = (a_x - b_x) / (b_y - a_y)
             # let p be the pivot
-            p_x = c_x + selector * math.sqrt(4 * l ** 2 / (1 + m_cp ** 2)) / 2
+            p_x = c_x + selector * math.sqrt(l ** 2 / (1 + m_cp ** 2))
             p_y = m_cp * (p_x - c_x) + c_y
         
         self.__pivot = (p_x, p_y)
