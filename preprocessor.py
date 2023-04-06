@@ -12,9 +12,9 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
     """Preprocesses a python script by recursively transcluding imported files."""
     # if not top level, returns the script without import statements
     if not os.path.exists(file_path):
-        print(file_path)
+        #print(file_path)
         return
-    if not module_list:
+    if module_list == None:
         module_list = []
         is_top_level = True
     else:
@@ -27,7 +27,7 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
             line = file.readline()
             if not line:
                 break
-            words = line.split(" ")
+            words = line.strip().split(" ")
             if not len(words):
               module_buffer.append(line)  
             elif words[0] == "import" or words[0] == "from":
@@ -122,7 +122,7 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
             strings.extend(module.body_text for module in module_list)
             strings.append("# End imports.\n")
             strings.extend(module_buffer)
-            return "\n".join(strings)
+            return "".join(strings)
         else:
             #print(f"module {module_name} preview:{''.join(module_buffer)}")
             return "".join(module_buffer)

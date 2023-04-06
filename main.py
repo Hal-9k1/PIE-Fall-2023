@@ -5,10 +5,12 @@ import input
 from challenges import *
 
 chassis_object = None
-input_controller = None
+input_generator = None
 
 def create_chassis():
     return chassis.TestChassis((0, 0), 0)
+def create_input_generator():
+    return input.TankInputGenerator() #input.WeirdInputGenerator()
 
 def autonomous_setup():
     global chassis_object
@@ -20,9 +22,10 @@ def autonomous_main():
     chassis_object.update()
 
 def teleop_setup():
-    global chassis_object, input_controller
-    chassis_object = chassis_object or create_chassis()
-    input_controller = input.WeirdInputController()
+    global chassis_object, input_generator
+    if not chassis_object:
+        chassis_object = create_chassis()
+    input_generator = create_input_generator()
 
 def teleop_main():
-    chassis_object.update_input(input_controller.generate_gamepad())
+    chassis_object.update_input(input_generator.generate_keyboard())

@@ -5,70 +5,81 @@ import util
 
 class TestChassis:
     """Test chassis for pimulator.pierobotics.org."""
-    __slots__ = "__motors", "__wheels", "__position", "__angle", "__queue", "__init_encs"
-    __wheelspan = 1 # meters
+    __slots__ = "_motors", "_wheels", "_position", "_angle", "_queue", "_init_encs", "_should_start_next_path"
+    _wheelspan = 1 # meters
     
     def __init__(self, starting_position, starting_angle):
-        self.__queue = []
-        self.__position = starting_position
-        self.__angle = starting_angle
-        self.__motors = util.LRStruct(
+        self._queue = []
+        self._position = starting_position
+        self._angle = starting_angle
+        self._motors = util.LRStruct(
             left = devices.Motor("koala_bear", "a"),
             right = devices.Motor("koala_bear", "b").invert()
         )
-        self.__wheels = util.LRStruct(
-            left = devices.Wheel(__motors.left, 0.5 / math.pi, 8),
-            right = devices.Wheel(__motors.right, 0.5 / math.pi, 8)
+        self._wheels = util.LRStruct(
+            left = devices.Wheel(self._motors.left, 0.5 / math.pi, 8),
+            right = devices.Wheel(self._motors.right, 0.5 / math.pi, 8)
         )
-        self.__init_encs = util.LRStruct(left = 0, right = 0)
+        self._init_encs = util.LRStruct(left = 0, right = 0)
     
     def move(self, end_pos, angle):
         """Autonomous mode only. Moves the chassis along a path."""
-        self.__queue.append((self.__update_move, path.Path(__position, end_pos, angle)))
-        self.__position = end_pos
+        self._queue.append((self._update_move, path.Path(self._position, end_pos, angle)))
+        self._position = end_pos
     def orient(self, angle):
         """Autonomous mode only. Rotates the chassis in place to align with the given angle in radians."""
-        self.turn(angle - self.__angle)
-        self.__angle = angle
+        self.turn(angle - self._angle)
+        self._angle = angle
     def turn(self, angle):
         """Autonomous mode only. Rotates the chassis in place by the given angle in radians."""
-        self.__queue.append((self.__update_turn, angle))
-        self.__angle += angle
+        self._queue.append((self._update_turn, angle))
+        self._angle += angle
     def update(self):
         """Autonomous mode only. Updates state and motor powers."""
-        if self.__queue:
-            if not self.__queue[0][0](self.__queue[0][1]):
-                self.__queue.pop(0)
-                self.__init_encs = util.LRStruct(
-                    left = self.__motors.left.get_encoder(),
-                    right = self.__motors.right.get_encoder()
+        if self._queue:
+            if not self._queue[0][0](self._queue[0][1]):
+                self._queue.pop(0)
+                self._init_encs = util.LRStruct(
+                    left = self._motors.left.get_encoder(),
+                    right = self._motors.right.get_encoder()
                 )
-        __wheels.left.update()
-        __wheels.right.update()
+                self._should_start_next_path = True
+        self._wheels.left.update()
+        self._wheels.right.update()
     def update_input(self, input):
         """Teleop mode only. Takes common inputs and updates the motors' strengths."""
-        __motors.left.set_velocity(input.drive.left + input.turn)
-        __motors.right.set_velocity(input.drive.right - input.turn)
+        if input.drive.left > 0:
+            print(input)
+        self._motors.left.set_velocity(input.drive.left + input.turn)
+        self._motors.right.set_velocity(input.drive.right - input.turn)
     
-    def __update_move(self, path):
-        
+    def _update_move(self, path):
+        if self._should_start_next_path:
+            pass #_wheels.left.set_goal()
+        else:
+            left_progress = self._wheels.left.get_goal_progress()
+            right_progress = self._wheels.right.get_goal_progress()
+            if math.min(left_progress, right_progress) < 1:
+                return False
+            if left_progress > right_progress:
+                self._wheels.left.nudge_velocity(left_progress / right_progress)
         return True
-    def __update_turn(self, angle):
-        wheel_dist = angle / self.__wheelspan
+    def _update_turn(self, angle):
+        wheel_dist = angle / self._wheelspan
         
         return
 
 class QuadChassis:
     """The rectangular two-wheel drive chassis in use since 3/13/2023."""
-    __slots__ = "__motors", "__wheels"
+    _slots_ = "_motors", "_wheels"
     def __init__(self, starting_position, starting_angle):
-        self.__motors = util.LRStruct(
+        self._motors = util.LRStruct(
             left = devices.Motor("koala_bear", "a"),
             right = devices.Motor("koala_bear", "b").invert()
         )
-        self.__wheels = util.LRStruct(
-            left = devices.Wheel(__motors.left, 0.5, 8),
-            right = devices.Wheel(__motors.right, 0.5, 8)
+        self._wheels = util.LRStruct(
+            left = devices.Wheel(_motors.left, 0.5, 8),
+            right = devices.Wheel(_motors.right, 0.5, 8)
         )
     def move(self, end_pos, angle):
         pass
@@ -79,5 +90,5 @@ class QuadChassis:
     def update(self):
         pass
     def update_input(self, input):
-        __motors.left.set_velocity(input.drive.left + input.turn)
-        __motors.right.set_velocity(input.drive.right - input.turn)
+        _motors.left.set_velocity(input.drive.left + input.turn)
+        _motors.right.set_velocity(input.drive.right - input.turn)

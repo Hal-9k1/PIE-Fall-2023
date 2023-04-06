@@ -34,22 +34,29 @@ class Motor:
     
 class Wheel:
     # goal and radius are in meters
-    __slots__ = "__motor", "__radius", "__ticks_per_rot", "__goal_pos", "__goal_delta"
+    __slots__ = "_motor", "_radius", "_ticks_per_rot", "_goal_pos", "_goal_delta", "_velocity", "_initialized"
     def __init__(self, motor, radius, ticks_per_rotation):
-        self.__motor = motor
-        self.__radius = radius
-        self.__ticks_per_rot = ticks_per_rotation
+        self._motor = motor
+        self._radius = radius
+        self._ticks_per_rot = ticks_per_rotation
+        self._initialized = False
     
     def set_goal(self, goal, velocity):
-        self.__goal_delta = math.ceil(goal / (radius * 2 * math.pi) * self.__ticks_per_rot)
-        self.__goal_pos = self.__motor.get_encoder() + self.__goal_delta 
-        self.__motor.set_velocity(math.copysign(velocity, __goal_pos))
+        self._initialized = True
+        self._goal_delta = math.ceil(goal / (radius * 2 * math.pi) * self._ticks_per_rot)
+        self._goal_pos = self._motor.get_encoder() + self._goal_delta 
+        self._motor.set_velocity(math.copysign(velocity, _goal_pos))
+        self._velocity = velocity
     def get_goal_progress(self):
-        return (self.__goal_pos - self.__motor.get_encoder()) / self.__goal_delta
+        return (self._goal_pos - self._motor.get_encoder()) / self._goal_delta
+    def nudge_velocity(self, percent):
+        self._velocity *= 1 + percent / 100
     def stop(self):
-        self.__goal_pos = self.__motor.get_encoder()
-        self.__motor.set_velocity(0)
+        self._goal_pos = self._motor.get_encoder()
+        self._motor.set_velocity(0)
     def update(self):
-        delta = self.__goal_pos - self.__motor.get_encoder()
+        if not self._initialized:
+            return # no commands given yet
+        delta = self._goal_pos - self._motor.get_encoder()
         if self.get_goal_progress() >= 1:
-            self.__motor.set_velocity(0)
+            self._motor.set_velocity(0)
