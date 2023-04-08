@@ -10,15 +10,14 @@ class TankInputGenerator:
     def generate_keyboard(self):
         return Input(
             drive_left = (1 if Keyboard.get_value("w") else 0) - (1 if Keyboard.get_value("s") else 0),
-            drive_right = (1 if Keyboard.get_value("w") else 0) - (1 if Keyboard.get_value("s") else 0),
+            drive_right = (1 if Keyboard.get_value("up_arrow") else 0) - (1 if Keyboard.get_value("down_arrow") else 0),
             turn = 0
         )
     def generate_gamepad(self):
-        raise NotImplementedError
         return Input(
-            drive_left = drive,
-            drive_right = drive,
-            turn = (1 if Keyboard.get_value("d") else 0) - (1 if Keyboard.get_value("a") else 0)
+            drive_left = Gamepad.get_value("joystick_left_y"),
+            drive_right = Gamepad.get_value("joystick_right_y"),
+            turn = 0
         )
 class WeirdInputGenerator:
     def generate_keyboard(self):

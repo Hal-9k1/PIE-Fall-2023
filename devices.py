@@ -11,13 +11,17 @@ class Motor:
     def set_deadband(self, deadband):
         self._set("deadband", deadband)
         return self
-    def set_pid(self, pid_tuple):
-        if pid[0]:
-            self._set("pid_kp", pid[0])
-        if pid[1]:
-            self._set("pid_ki", pid[1])
-        if pid[2]:
-            self._set("pid_kd", pid[2])
+    def set_pid(self, p, i, d):
+        if not (p or i or d):
+            self._set("pid_enabled", False)
+            return
+        self._set("pid_enabled", True)
+        if p:
+            self._set("pid_kp", p)
+        if i:
+            self._set("pid_ki", i)
+        if d:
+            self._set("pid_kd", d)
         return self
     def set_velocity(self, velocity):
         self._set("velocity", velocity)
@@ -28,8 +32,10 @@ class Motor:
         return self._get("enc")
     
     def _set(self, key, value):
+        print("set:" + self._controller + ";" + key + "_" + self._motor + ";" + str(value) + ";")
         Robot.set_value(self._controller, key + "_" + self._motor, value)
     def _get(self, key):
+        print("get:" + self._controller + ";" + key + "_" + self._motor + ";")
         return Robot.get_value(self._controller, key + "_" + self._motor)
     
 class Wheel:

@@ -48,14 +48,13 @@ class TestChassis:
         self._wheels.right.update()
     def update_input(self, input):
         """Teleop mode only. Takes common inputs and updates the motors' strengths."""
-        if input.drive.left > 0:
-            print(input)
         self._motors.left.set_velocity(input.drive.left + input.turn)
         self._motors.right.set_velocity(input.drive.right - input.turn)
     
     def _update_move(self, path):
         if self._should_start_next_path:
-            pass #_wheels.left.set_goal()
+            _wheels.left.set_goal(path.get_offset_length(self._wheelspan / 2))
+            _wheels.right.set_goal(path.get_offset_length(-self._wheelspan / 2))
         else:
             left_progress = self._wheels.left.get_goal_progress()
             right_progress = self._wheels.right.get_goal_progress()

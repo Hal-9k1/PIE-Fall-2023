@@ -1,0 +1,2 @@
+py preprocessor.py main.py > tmp/test.py
+vim -c "normal ggvG$\"+y" -c ":q" tmp/test.py
