@@ -55,8 +55,6 @@ class Wheel:
         self._velocity = velocity
     def get_goal_progress(self):
         return (self._goal_pos - self._motor.get_encoder()) / self._goal_delta
-    def nudge_velocity(self, percent):
-        self._velocity *= 1 + percent / 100
     def stop(self):
         self._goal_pos = self._motor.get_encoder()
         self._motor.set_velocity(0)

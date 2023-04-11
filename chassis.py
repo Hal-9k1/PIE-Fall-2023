@@ -5,7 +5,7 @@ import util
 
 class TestChassis:
     """Test chassis for pimulator.pierobotics.org."""
-    __slots__ = "_motors", "_wheels", "_position", "_angle", "_queue", "_init_encs", "_should_start_next_path"
+    __slots__ = "_motors", "_wheels", "_position", "_angle", "_queue", "_init_encs"
     _wheelspan = 1 # meters
     
     def __init__(self, starting_position, starting_angle):
@@ -43,7 +43,6 @@ class TestChassis:
                     left = self._motors.left.get_encoder(),
                     right = self._motors.right.get_encoder()
                 )
-                self._should_start_next_path = True
         self._wheels.left.update()
         self._wheels.right.update()
     def update_input(self, input):
@@ -52,42 +51,35 @@ class TestChassis:
         self._motors.right.set_velocity(input.drive.right - input.turn)
     
     def _update_move(self, path):
-        if self._should_start_next_path:
-            _wheels.left.set_goal(path.get_offset_length(self._wheelspan / 2))
-            _wheels.right.set_goal(path.get_offset_length(-self._wheelspan / 2))
-        else:
-            left_progress = self._wheels.left.get_goal_progress()
-            right_progress = self._wheels.right.get_goal_progress()
-            if math.min(left_progress, right_progress) < 1:
-                return False
-            if left_progress > right_progress:
-                self._wheels.left.nudge_velocity(left_progress / right_progress)
-        return True
+        left_dist = (path.get_offset_length(self._wheelspan / 2) - self._motors.left.get_encoder()
+            + self._init_encs.left)
+        right_dist = (path.get_offset_length(-self._wheelspan / 2)
+            - self._motors.right.get_encoder() + self._init_encs.left)
+        return self._update_motors(left_dist, right_dist)
     def _update_turn(self, angle):
-        wheel_dist = angle / self._wheelspan
-        
-        return
+        goal_dist = angle / self._wheelspan / 2
+        left_dist = math.copysign(goal_dist, angle) - self._motors.left.get_encoder() + self._init_encs.left
+        right_dist = -math.copysign(goal_dist, angle) - self._motors.right.get_encoder() + self._init_encs.right
+        return self._update_motors(left_dist, right_dist)
+    def _update_motors(self, left_dist, right_dist):
+        max_abs_dist = max(abs(left_dist), abs(right_dist))
+        _wheels.left.set_goal(left_dist, left_dist / max_abs_dist)
+        _wheels.right.set_goal(right_dist, right_dist / max_abs_dist)
+        left_progress = self._wheels.left.get_goal_progress()
+        right_progress = self._wheels.right.get_goal_progress()
+        return math.min(left_progress, right_progress) < 1
 
-class QuadChassis:
-    """The rectangular two-wheel drive chassis in use since 3/13/2023."""
+class QuadChassis(TestChassis):
+    """The rectangular two-motor drive chassis in use since 3/13/2023."""
     _slots_ = "_motors", "_wheels"
+    _wheelspan = 0.3683
     def __init__(self, starting_position, starting_angle):
         self._motors = util.LRStruct(
             left = devices.Motor("koala_bear", "a"),
             right = devices.Motor("koala_bear", "b").invert()
         )
+        ticks_per_rotation = 64 * 30.125 / 1.42 # 30.125 probably a gear ratio, 1.42 magic number
         self._wheels = util.LRStruct(
-            left = devices.Wheel(_motors.left, 0.5, 8),
-            right = devices.Wheel(_motors.right, 0.5, 8)
+            left = devices.Wheel(_motors.left, 0.0508, ticks_per_rotation),
+            right = devices.Wheel(_motors.right, 0.0508, ticks_per_rotation)
         )
-    def move(self, end_pos, angle):
-        pass
-    def orient(self, angle):
-        pass
-    def turn(self, angle):
-        pass
-    def update(self):
-        pass
-    def update_input(self, input):
-        _motors.left.set_velocity(input.drive.left + input.turn)
-        _motors.right.set_velocity(input.drive.right - input.turn)

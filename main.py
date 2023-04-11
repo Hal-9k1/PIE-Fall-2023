@@ -2,13 +2,13 @@ import math
 import chassis
 import path
 import input
-from challenges import *
+#from challenges import * # apparently we don't need to have challenges on the robot
 
 chassis_object = None
 input_generator = None
 
 def create_chassis():
-    return chassis.TestChassis((0, 0), 0)
+    return chassis.QuadChassis((0, 0), 0)
 def create_input_generator():
     return input.TankInputGenerator() #input.WeirdInputGenerator()
 
