@@ -7,10 +7,17 @@ class Input:
         self.turn = turn
 
 class TankInputGenerator:
+    """Controls chassis motion with two joysticks.
+
+    The "left" and "right" components of the drive (whose interpretation depends on the chassis)
+    are controlled by the left and right joysticks.
+    """
     def generate_keyboard(self):
         return Input(
-            drive_left = (1 if Keyboard.get_value("w") else 0) - (1 if Keyboard.get_value("s") else 0),
-            drive_right = (1 if Keyboard.get_value("up_arrow") else 0) - (1 if Keyboard.get_value("down_arrow") else 0),
+            drive_left = ((1 if Keyboard.get_value("w") else 0)
+                - (1 if Keyboard.get_value("s") else 0)),
+            drive_right = ((1 if Keyboard.get_value("up_arrow") else 0)
+                - (1 if Keyboard.get_value("down_arrow") else 0)),
             turn = 0
         )
     def generate_gamepad(self):
@@ -19,7 +26,13 @@ class TankInputGenerator:
             drive_right = Gamepad.get_value("joystick_right_y"),
             turn = 0
         )
+
 class WeirdInputGenerator:
+    """Controls chassis motion with one joystick.
+
+    Driving and turning are both controlled by the left joystick, leaving the other joystick
+    free for... something.
+    """
     def generate_keyboard(self):
         drive = (1 if Keyboard.get_value("w") else 0) - (1 if Keyboard.get_value("s") else 0)
         return Input(

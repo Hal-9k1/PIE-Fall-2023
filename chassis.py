@@ -5,20 +5,42 @@ import util
 
 class TestChassis:
     """Test chassis for pimulator.pierobotics.org."""
-    __slots__ = "_motors", "_wheels", "_position", "_angle", "_queue", "_init_encs"
-    _wheelspan = 1 # meters
-    
-    def __init__(self, starting_position, starting_angle):
+    def __init__(self, robot, starting_position, starting_angle):
         self._queue = []
         self._position = starting_position
         self._angle = starting_angle
         self._motors = util.LRStruct(
-            left = devices.Motor("koala_bear", "a"),
-            right = devices.Motor("koala_bear", "b").invert()
+            left = devices.Motor(robot, "koala_bear", "a"),
+            right = devices.Motor(robot, "koala_bear", "b").invert()
         )
+    
+    def move(self, end_pos, angle):
+        pass
+    def orient(self, angle):
+        pass
+    def turn(self, angle):
+        pass
+    def update(self):
+        pass
+    def update_input(self, input):
+        pass
+
+class QuadChassis:
+    """The rectangular two-motor drive chassis in use since 3/13/2023."""
+    __slots__ = "_motors", "_wheels", "_position", "_angle", "_queue", "_init_encs"
+    _wheelspan = 0.3683
+    def __init__(self, robot, starting_position, starting_angle):
+        self._queue = []
+        self._position = starting_position
+        self._angle = starting_angle
+        self._motors = util.LRStruct(
+            left = devices.Motor(robot, "koala_bear", "a"),
+            right = devices.Motor(robot, "koala_bear", "b").invert()
+        )
+        ticks_per_rotation = 64 * 30.125 / 1.42 # 30.125 probably a gear ratio, 1.42 magic number
         self._wheels = util.LRStruct(
-            left = devices.Wheel(self._motors.left, 0.5 / math.pi, 8),
-            right = devices.Wheel(self._motors.right, 0.5 / math.pi, 8)
+            left = devices.Wheel(self._motors.left, 0.0508, ticks_per_rotation),
+            right = devices.Wheel(self._motors.right, 0.0508, ticks_per_rotation)
         )
         self._init_encs = util.LRStruct(left = 0, right = 0)
     
@@ -36,13 +58,13 @@ class TestChassis:
         self._angle += angle
     def update(self):
         """Autonomous mode only. Updates state and motor powers."""
-        if self._queue:
-            if not self._queue[0][0](self._queue[0][1]):
-                self._queue.pop(0)
-                self._init_encs = util.LRStruct(
-                    left = self._motors.left.get_encoder(),
-                    right = self._motors.right.get_encoder()
-                )
+        if self._queue and not self._queue[0][0](self._queue[0][1]):
+            print("next queue item")
+            self._queue.pop(0)
+            self._init_encs = util.LRStruct(
+                left = self._motors.left.get_encoder(),
+                right = self._motors.right.get_encoder()
+            )
         self._wheels.left.update()
         self._wheels.right.update()
     def update_input(self, input):
@@ -63,23 +85,9 @@ class TestChassis:
         return self._update_motors(left_dist, right_dist)
     def _update_motors(self, left_dist, right_dist):
         max_abs_dist = max(abs(left_dist), abs(right_dist))
-        _wheels.left.set_goal(left_dist, left_dist / max_abs_dist)
-        _wheels.right.set_goal(right_dist, right_dist / max_abs_dist)
+        self._wheels.left.set_goal(left_dist, left_dist / max_abs_dist)
+        self._wheels.right.set_goal(right_dist, right_dist / max_abs_dist)
         left_progress = self._wheels.left.get_goal_progress()
         right_progress = self._wheels.right.get_goal_progress()
-        return math.min(left_progress, right_progress) < 1
+        return min(left_progress, right_progress) < 1
 
-class QuadChassis(TestChassis):
-    """The rectangular two-motor drive chassis in use since 3/13/2023."""
-    _slots_ = "_motors", "_wheels"
-    _wheelspan = 0.3683
-    def __init__(self, starting_position, starting_angle):
-        self._motors = util.LRStruct(
-            left = devices.Motor("koala_bear", "a"),
-            right = devices.Motor("koala_bear", "b").invert()
-        )
-        ticks_per_rotation = 64 * 30.125 / 1.42 # 30.125 probably a gear ratio, 1.42 magic number
-        self._wheels = util.LRStruct(
-            left = devices.Wheel(_motors.left, 0.0508, ticks_per_rotation),
-            right = devices.Wheel(_motors.right, 0.0508, ticks_per_rotation)
-        )

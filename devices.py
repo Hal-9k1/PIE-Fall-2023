@@ -1,9 +1,12 @@
+import math
+
 class Motor:
     """Wraps a KoalaBear-controlled motor."""
-    __slots__ = "_controller", "_motor"
-    def __init__(self, controller_id, motor):
+    __slots__ = "_controller", "_motor", "_robot"
+    def __init__(self, robot, controller_id, motor):
         self._controller = controller_id
         self._motor = motor
+        self._robot = robot
     
     def invert(self):
         self._set("invert", True)
@@ -32,13 +35,12 @@ class Motor:
         return self._get("enc")
     
     def _set(self, key, value):
-        print("set:" + self._controller + ";" + key + "_" + self._motor + ";" + str(value) + ";")
-        Robot.set_value(self._controller, key + "_" + self._motor, value)
+        self._robot.set_value(self._controller, key + "_" + self._motor, value)
     def _get(self, key):
-        print("get:" + self._controller + ";" + key + "_" + self._motor + ";")
-        return Robot.get_value(self._controller, key + "_" + self._motor)
+        return self._robot.get_value(self._controller, key + "_" + self._motor)
     
 class Wheel:
+    """Represents a wheel that may be ran to a goal position."""
     # goal and radius are in meters
     __slots__ = "_motor", "_radius", "_ticks_per_rot", "_goal_pos", "_goal_delta", "_velocity", "_initialized"
     def __init__(self, motor, radius, ticks_per_rotation):
@@ -49,9 +51,9 @@ class Wheel:
     
     def set_goal(self, goal, velocity):
         self._initialized = True
-        self._goal_delta = math.ceil(goal / (radius * 2 * math.pi) * self._ticks_per_rot)
+        self._goal_delta = math.ceil(goal / (self._radius * 2 * math.pi) * self._ticks_per_rot)
         self._goal_pos = self._motor.get_encoder() + self._goal_delta 
-        self._motor.set_velocity(math.copysign(velocity, _goal_pos))
+        self._motor.set_velocity(math.copysign(velocity, self._goal_pos))
         self._velocity = velocity
     def get_goal_progress(self):
         return (self._goal_pos - self._motor.get_encoder()) / self._goal_delta
@@ -61,6 +63,5 @@ class Wheel:
     def update(self):
         if not self._initialized:
             return # no commands given yet
-        delta = self._goal_pos - self._motor.get_encoder()
         if self.get_goal_progress() >= 1:
             self._motor.set_velocity(0)
