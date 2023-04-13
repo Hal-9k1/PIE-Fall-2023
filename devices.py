@@ -8,8 +8,8 @@ class Motor:
         self._motor = motor
         self._robot = robot
     
-    def invert(self):
-        self._set("invert", True)
+    def set_invert(self, invert):
+        self._set("invert", invert)
         return self
     def set_deadband(self, deadband):
         self._set("deadband", deadband)
