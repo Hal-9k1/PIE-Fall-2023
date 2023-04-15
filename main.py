@@ -14,7 +14,7 @@ def get_robot():
 def create_chassis():
     return chassis.QuadChassis(get_robot(), (0, 0), 0)
 def create_input_generator():
-    return input.TankInputGenerator() #input.WeirdInputGenerator()
+    return input.TankInputGenerator(gamepad_tolerance=0.06) #input.WeirdInputGenerator()
 
 def autonomous_setup():
     global chassis_object
@@ -29,4 +29,4 @@ def teleop_setup():
         chassis_object = create_chassis()
     input_generator = create_input_generator()
 def teleop_main():
-    chassis_object.update_input(input_generator.generate_keyboard())
+    chassis_object.update_input(input_generator.generate_gamepad())

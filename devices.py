@@ -17,7 +17,7 @@ class Motor:
     def set_pid(self, p, i, d):
         if not (p or i or d):
             self._set("pid_enabled", False)
-            return
+            return self
         self._set("pid_enabled", True)
         if p:
             self._set("pid_kp", p)
@@ -33,6 +33,8 @@ class Motor:
         return self._get("velocity")
     def get_encoder(self):
         return self._get("enc")
+    def reset_encoder(self):
+        self._set("enc", 0)
     
     def _set(self, key, value):
         self._robot.set_value(self._controller, key + "_" + self._motor, value)
@@ -42,7 +44,7 @@ class Motor:
 class Wheel:
     """Represents a wheel that may be ran to a goal position."""
     # goal and radius are in meters
-    __slots__ = "_motor", "_radius", "_ticks_per_rot", "_goal_pos", "_goal_delta", "_velocity", "_initialized"
+    __slots__ = "_motor", "_radius", "_ticks_per_rot", "_goal_pos", "_velocity", "_initialized"
     def __init__(self, motor, radius, ticks_per_rotation):
         self._motor = motor
         self._radius = radius
@@ -51,12 +53,13 @@ class Wheel:
     
     def set_goal(self, goal, velocity):
         self._initialized = True
-        self._goal_delta = math.ceil(goal / (self._radius * 2 * math.pi) * self._ticks_per_rot)
-        self._goal_pos = self._motor.get_encoder() + self._goal_delta 
+        self._goal_pos = math.ceil(goal / (self._radius * 2 * math.pi) * self._ticks_per_rot) 
         self._motor.set_velocity(math.copysign(velocity, self._goal_pos))
         self._velocity = velocity
     def get_goal_progress(self):
-        return (self._goal_pos - self._motor.get_encoder()) / self._goal_delta
+        if not self._initialized:
+            return 0
+        return 1 - ((self._goal_pos - self._motor.get_encoder()) / self._goal_pos)
     def stop(self):
         self._goal_pos = self._motor.get_encoder()
         self._motor.set_velocity(0)

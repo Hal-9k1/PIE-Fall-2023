@@ -10,8 +10,8 @@ class TestChassis:
         self._position = starting_position
         self._angle = starting_angle
         self._motors = util.LRStruct(
-            left = devices.Motor(robot, "koala_bear", "a"),
-            right = devices.Motor(robot, "koala_bear", "b").invert()
+            left = devices.Motor(robot, "koala_bear", "a").set_invert(False),
+            right = devices.Motor(robot, "koala_bear", "b").set_invert(True)
         )
     
     def move(self, end_pos, angle):
@@ -27,22 +27,21 @@ class TestChassis:
 
 class QuadChassis:
     """The rectangular two-motor drive chassis in use since 3/13/2023."""
-    __slots__ = "_motors", "_wheels", "_position", "_angle", "_queue", "_init_encs"
+    __slots__ = "_motors", "_wheels", "_position", "_angle", "_queue"
     _wheelspan = 0.3683
     def __init__(self, robot, starting_position, starting_angle):
         self._queue = []
         self._position = starting_position
         self._angle = starting_angle
         self._motors = util.LRStruct(
-            left = devices.Motor(robot, "koala_bear", "a"),
-            right = devices.Motor(robot, "koala_bear", "b").invert()
+            left = devices.Motor(robot, "6_15372564724073988682", "b").set_invert(False),
+            right = devices.Motor(robot, "6_15372564724073988682", "a").set_invert(True)
         )
         ticks_per_rotation = 64 * 30.125 / 1.42 # 30.125 probably a gear ratio, 1.42 magic number
         self._wheels = util.LRStruct(
             left = devices.Wheel(self._motors.left, 0.0508, ticks_per_rotation),
             right = devices.Wheel(self._motors.right, 0.0508, ticks_per_rotation)
         )
-        self._init_encs = util.LRStruct(left = 0, right = 0)
     
     def move(self, end_pos, angle):
         """Autonomous mode only. Moves the chassis along a path."""
@@ -61,10 +60,8 @@ class QuadChassis:
         if self._queue and not self._queue[0][0](self._queue[0][1]):
             print("next queue item")
             self._queue.pop(0)
-            self._init_encs = util.LRStruct(
-                left = self._motors.left.get_encoder(),
-                right = self._motors.right.get_encoder()
-            )
+            self._motors.left.reset_encoder()
+            self._motors.right.reset_encoder()
         self._wheels.left.update()
         self._wheels.right.update()
     def update_input(self, input):
@@ -73,15 +70,15 @@ class QuadChassis:
         self._motors.right.set_velocity(input.drive.right - input.turn)
     
     def _update_move(self, path):
-        left_dist = (path.get_offset_length(self._wheelspan / 2) - self._motors.left.get_encoder()
-            + self._init_encs.left)
+        left_dist = (path.get_offset_length(self._wheelspan / 2)
+            * (1 - self._wheels.left.get_goal_progress()))
         right_dist = (path.get_offset_length(-self._wheelspan / 2)
-            - self._motors.right.get_encoder() + self._init_encs.left)
+            * (1 - self._wheels.right.get_goal_progress()))
         return self._update_motors(left_dist, right_dist)
     def _update_turn(self, angle):
         goal_dist = angle / self._wheelspan / 2
-        left_dist = math.copysign(goal_dist, angle) - self._motors.left.get_encoder() + self._init_encs.left
-        right_dist = -math.copysign(goal_dist, angle) - self._motors.right.get_encoder() + self._init_encs.right
+        left_dist = math.copysign(goal_dist, angle) * (1 - self._wheels.left.get_goal_progress())
+        right_dist = -math.copysign(goal_dist, angle) * (1 - self._wheels.right.get_goal_progress())
         return self._update_motors(left_dist, right_dist)
     def _update_motors(self, left_dist, right_dist):
         max_abs_dist = max(abs(left_dist), abs(right_dist))

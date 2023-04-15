@@ -26,10 +26,10 @@ class TankInputGenerator:
         )
     def generate_gamepad(self):
         drive_left = Gamepad.get_value("joystick_left_y")
-        if drive_left < self._gamepad_tolerance:
+        if abs(drive_left) < self._gamepad_tolerance:
             drive_left = 0
-        drive_right = Gamepad.get_value("joystick_left_y")
-        if drive_right < self._gamepad_tolerance:
+        drive_right = Gamepad.get_value("joystick_right_y")
+        if abs(drive_right) < self._gamepad_tolerance:
             drive_right = 0
         return Input(
             drive_left = drive_left,
@@ -43,6 +43,10 @@ class WeirdInputGenerator:
     Driving and turning are both controlled by the left joystick, leaving the other joystick
     free for... something.
     """
+    __slots__ = "_gamepad_tolerance"
+    def __init__(self, gamepad_tolerance):
+        self._gamepad_tolerance = gamepad_tolerance
+
     def generate_keyboard(self):
         drive = (1 if Keyboard.get_value("w") else 0) - (1 if Keyboard.get_value("s") else 0)
         return Input(
@@ -52,10 +56,10 @@ class WeirdInputGenerator:
         )
     def generate_gamepad(self):
         drive = Gamepad.get_value("joystick_left_y")
-        if drive < self._gamepad_tolerance:
+        if abs(drive) < self._gamepad_tolerance:
             drive = 0
         turn = Gamepad.get_value("joystick_left_x")
-        if turn < self._gamepad_tolerance:
+        if abs(turn) < self._gamepad_tolerance:
             turn = 0
         return Input(
             drive_left = drive,
