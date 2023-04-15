@@ -5,8 +5,16 @@ import util
 
 class TestChassis:
     """Test chassis for pimulator.pierobotics.org."""
-    def __init__(self, robot, starting_position, starting_angle):
+    # width = 26.7;               // width of robot, inches
+    # height = 20;                // height or robot, inches
+    # wheelWidth = 20;            // wheelbase width, inches
+    # wRadius = 2;                // radius of a wheel, inches
+    # MaxX = 192;                 // maximum X value, inches, field is 12'x12'
+    # MaxY = 144;                 // maximum Y value, inches, field is 12'x12'
+    __slots__ = "_queue", "_position", "_angle", "_motors", "_debug_printer"
+    def __init__(self, robot, debug_printer, starting_position, starting_angle):
         self._queue = []
+        self._debug_printer = debug_printer
         self._position = starting_position
         self._angle = starting_angle
         self._motors = util.LRStruct(
@@ -27,15 +35,16 @@ class TestChassis:
 
 class QuadChassis:
     """The rectangular two-motor drive chassis in use since 3/13/2023."""
-    __slots__ = "_motors", "_wheels", "_position", "_angle", "_queue"
+    __slots__ = "_motors", "_wheels", "_position", "_angle", "_queue", "_debug_printer"
     _wheelspan = 0.3683
-    def __init__(self, robot, starting_position, starting_angle):
+    def __init__(self, robot, debug_printer, starting_position, starting_angle):
         self._queue = []
+        self._debug_printer = debug_printer
         self._position = starting_position
         self._angle = starting_angle
         self._motors = util.LRStruct(
-            left = devices.Motor(robot, "6_15372564724073988682", "b").set_invert(False),
-            right = devices.Motor(robot, "6_15372564724073988682", "a").set_invert(True)
+            left = devices.Motor(robot, debug_printer, "6_15372564724073988682", "b").set_invert(False),
+            right = devices.Motor(robot, debug_printer, "6_15372564724073988682", "a").set_invert(True)
         )
         ticks_per_rotation = 64 * 30.125 / 1.42 # 30.125 probably a gear ratio, 1.42 magic number
         self._wheels = util.LRStruct(

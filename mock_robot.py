@@ -1,3 +1,5 @@
+import time
+
 class MockRobot:
     __slots__ = "_devices", "_max_devices", "_device_types", "_device_counts"
     _default_device_properties = {
@@ -29,11 +31,15 @@ class MockRobot:
             self._device_counts[device_type] = 0
     def get_value(self, device_id, value_name):
         self._check_property(device_id, value_name)
-        print(f"get:{device_id},{value_name}={self._devices[device_id][value_name]}")
+        if self._device_types[device_id] == "koalabear":
+            self._update_koalabear(device_id)
+        #print(f"get:{device_id},{value_name}={self._devices[device_id][value_name]}")
         return self._devices[device_id][value_name]
     def set_value(self, device_id, value_name, value):
         self._check_property(device_id, value_name)
-        print(f"set:{device_id},{value_name}={str(value)}")
+        #print(f"set:{device_id},{value_name}={str(value)}")
+        if self._device_types[device_id] == "koalabear":
+            self._update_koalabear(device_id)
         expected_type = type(self._devices[device_id][value_name])
         if expected_type == float and type(value) == int:
             value = float(value)
@@ -55,7 +61,16 @@ class MockRobot:
             self._device_counts[device_type] += 1
             device = {}
             device.update(self._default_device_properties[device_type])
+            if device_type == "koalabear":
+                device["_LAST_UPDATED"] = time.time()
             self._devices[device_id] = device
             self._device_types[device_id] = device_type
         if not value_name in self._devices[device_id]:
             raise ValueError(f"Property {value_name} not found on device of type {self._device_types[device_id]}.")
+    def _update_koalabear(self, device_id):
+        device = self._devices[device_id]
+        timestamp = time.time()
+        dt = device["_LAST_UPDATED"] - timestamp
+        device["_LAST_UPDATED"] = timestamp
+        device["enc_a"] += device["velocity_a"] * dt * (-1 if device["invert_a"] else 1)
+        device["enc_b"] += device["velocity_b"] * dt * (-1 if device["invert_b"] else 1)
