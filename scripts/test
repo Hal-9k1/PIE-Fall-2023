@@ -4,6 +4,5 @@ import time
 import tmp.test
 tmp.test.autonomous_setup()
 while True:
-  time.sleep(0.05)
   tmp.test.autonomous_main()
 '

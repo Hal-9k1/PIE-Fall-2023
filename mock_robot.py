@@ -1,7 +1,7 @@
 import time
 
 class MockRobot:
-    __slots__ = "_devices", "_max_devices", "_device_types", "_device_counts"
+    __slots__ = "_debug_logger", "_devices", "_max_devices", "_device_types", "_device_counts"
     _default_device_properties = {
         "koalabear": {
             "velocity_a": 0.0,
@@ -20,13 +20,19 @@ class MockRobot:
             "pid_ki_b": 0.035,
             "pid_kd_b": 0.0,
             "enc_b": 0
+        },
+        "servocontroller": {
+            "servo0": 0.0,
+            "servo1": 0.0
         }
     }
-    def __init__(self, max_devices):
+    _motor_ticks_per_sec = 2000
+    def __init__(self, debug_logger, max_devices):
         self._devices = {}
         self._device_types = {}
         self._max_devices = max_devices
         self._device_counts = {}
+        self._debug_logger = debug_logger
         for device_type in self._default_device_properties:
             self._device_counts[device_type] = 0
     def get_value(self, device_id, value_name):
@@ -37,7 +43,7 @@ class MockRobot:
         return self._devices[device_id][value_name]
     def set_value(self, device_id, value_name, value):
         self._check_property(device_id, value_name)
-        #print(f"set:{device_id},{value_name}={str(value)}")
+        #self._debug_logger.print(f"set:{device_id},{value_name}={str(value)}")
         if self._device_types[device_id] == "koalabear":
             self._update_koalabear(device_id)
         expected_type = type(self._devices[device_id][value_name])
@@ -72,5 +78,9 @@ class MockRobot:
         timestamp = time.time()
         dt = device["_LAST_UPDATED"] - timestamp
         device["_LAST_UPDATED"] = timestamp
-        device["enc_a"] += device["velocity_a"] * dt * (-1 if device["invert_a"] else 1)
-        device["enc_b"] += device["velocity_b"] * dt * (-1 if device["invert_b"] else 1)
+        if abs(device["velocity_a"]) > 1:
+            raise ValueError("Koalabear velocity a is out of bounds.")
+        if abs(device["velocity_b"]) > 1:
+            raise ValueError("Koalabear velocity b is out of bounds.")
+        device["enc_a"] += device["velocity_a"] * dt * self._motor_ticks_per_sec * (-1 if device["invert_a"] else 1)
+        device["enc_b"] += device["velocity_b"] * dt * self._motor_ticks_per_sec * (-1 if device["invert_b"] else 1)
