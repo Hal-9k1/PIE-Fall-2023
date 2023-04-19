@@ -25,3 +25,5 @@ class DebugLogger:
     def reset_print_tag(self, tag):
         if tag in self._printed_tags:
             del self._printed_tags[tag]
+def inches_to_meters(inches):
+    return inches / 39.3700787

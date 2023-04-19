@@ -1,11 +1,13 @@
 import devices
+import util
 import math
 
 class Arm:
     __slots__ = "_forearm_motor", "_forearm_goal_encoder", "_forearm_start_encoder"
-    _forearm_length = 0.4572 # meters, 18 in
-    _upperarm_length = 0.25654 # also meters, 10.1 in
-    _upperarm_mount_height = 0.1778 # metric party! 7 in
+    _forearm_length = util.inches_to_meters(18)
+    _upperarm_length = util.inches_to_meters(10.1)
+    _upperarm_mount_height = util.inches_to_meters(7)
+    _upperarm_angle_range = (0, math.pi / 2) # in radians
     _ticks_per_rotation = 64 * 30.125 / 1.42 
     def __init__(self, debug_logger, robot):
         self._forearm_motor = (devices.Motor(robot, debug_logger, "6_11068811781328764060", "a")
@@ -23,14 +25,17 @@ class Arm:
     def update(self):
         if self._forearm_start_encoder == None:
             return
-        start_encoder_diff = self._forearm_motor.get_encoder() - self._forearm_start_encoder
-        encoder_diff = self._forearm_motor.get_encoder() - self._forearm_goal_encoder
-        if math.copysign(start_encoder_diff, encoder_diff) != start_encoder_diff:
+        encoder = self._forearm_motor.get_encoder()
+        start_encoder_diff = encoder - self._forearm_start_encoder
+        encoder_diff = encoder - self._forearm_goal_encoder
+        if (encoder < self._upperarm_angle_range[0] / (2 * math.pi) * self._ticks_per_rotation
+            or encoder > self._upperarm_angle_range[1] / (2 * math.pi) * self._ticks_per_rotation
+            or math.copysign(start_encoder_diff, encoder_diff) != start_encoder_diff):
             forearm_velocity = 0
         else:
             forearm_velocity = math.copysign(1, start_encoder_diff)
         self._forearm_motor.set_velocity(forearm_velocity)
-        print(forearm_velocity)
+        print(f"forearm velocity: {forearm_velocity}")
         return forearm_velocity != 0
     def update_input(self, input_object):
         self._forearm_motor.set_velocity(input_object.arm_velocity)

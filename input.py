@@ -8,6 +8,12 @@ class Input:
         self.arm_velocity = arm_velocity
         self.hand_status = hand_status
 
+def calc_gamepad_arm_velocity():
+    arm_bias = 0.1
+    arm_strength = 0.4
+    return ((arm_strength - arm_bias if Gamepad.get_value("r_bumper") else 0)
+        - (arm_strength if Gamepad.get_value("r_trigger") else 0)) + arm_bias
+
 class TankInputGenerator:
     """Controls chassis motion with two joysticks.
 
@@ -21,12 +27,18 @@ class TankInputGenerator:
         self._hand_close_pressed = False
 
     def generate_keyboard(self):
-        return Input( # TODO: add arm velocity and hand status
+        return Input(
             drive_left = ((1 if Keyboard.get_value("w") else 0)
                 - (1 if Keyboard.get_value("s") else 0)),
             drive_right = ((1 if Keyboard.get_value("up_arrow") else 0)
                 - (1 if Keyboard.get_value("down_arrow") else 0)),
-            turn = 0
+            turn = 0,
+            # who knows if these keybinds make sense, the peripherals are really meant to be
+            # controlled by gamepad...
+            arm_velocity = ((1 if Keyboard.get_value("q") else 0)
+                - (1 if Keyboard.get_value("a") else 0)),
+            hand_status = ((1 if Keyboard.get_value("e") else 0)
+                - (1 if Keyboard.get_value("d") else 0))
         )
     def generate_gamepad(self):
         drive_left = Gamepad.get_value("joystick_left_y")
@@ -35,10 +47,6 @@ class TankInputGenerator:
         drive_right = Gamepad.get_value("joystick_right_y")
         if abs(drive_right) < self._gamepad_tolerance:
             drive_right = 0
-        arm_bias = 0.1
-        arm_strength = 0.4
-        arm_velocity = ((arm_strength - arm_bias if Gamepad.get_value("r_bumper") else 0)
-            - (arm_strength if Gamepad.get_value("r_trigger") else 0)) + arm_bias
         hand_status = ((1 if (Gamepad.get_value("l_bumper") and not self._hand_open_pressed) else 0)
             - (1 if (Gamepad.get_value("l_trigger") and not self._hand_close_pressed) else 0))
         self._hand_open_pressed = Gamepad.get_value("l_bumper")
@@ -48,7 +56,7 @@ class TankInputGenerator:
             drive_left = drive_left,
             drive_right = drive_right,
             turn = 0,
-            arm_velocity = arm_velocity,
+            arm_velocity = calc_gamepad_arm_velocity(),
             hand_status = hand_status
         )
 
@@ -64,10 +72,14 @@ class WeirdInputGenerator:
 
     def generate_keyboard(self):
         drive = (1 if Keyboard.get_value("w") else 0) - (1 if Keyboard.get_value("s") else 0)
-        return Input( # TODO: add arm velocity and hand status
+        return Input(
             drive_left = drive,
             drive_right = drive,
-            turn = (1 if Keyboard.get_value("d") else 0) - (1 if Keyboard.get_value("a") else 0)
+            turn = (1 if Keyboard.get_value("d") else 0) - (1 if Keyboard.get_value("a") else 0),
+            arm_velocity = ((1 if Keyboard.get_value("r") else 0)
+                - (1 if Keyboard.get_value("f") else 0)),
+            hand_status = ((1 if Keyboard.get_value("t") else 0)
+                - (1 if Keyboard.get_value("g") else 0))
         )
     def generate_gamepad(self):
         drive = Gamepad.get_value("joystick_left_y")
@@ -76,8 +88,14 @@ class WeirdInputGenerator:
         turn = Gamepad.get_value("joystick_left_x")
         if abs(turn) < self._gamepad_tolerance:
             turn = 0
-        return Input( # TODO: add arm velocity and hand status
+        hand_status = ((1 if (Gamepad.get_value("l_bumper") and not self._hand_open_pressed) else 0)
+            - (1 if (Gamepad.get_value("l_trigger") and not self._hand_close_pressed) else 0))
+        self._hand_open_pressed = Gamepad.get_value("l_bumper")
+        self._hand_closed_pressed = Gamepad.get_value("l_trigger")
+        return Input(
             drive_left = drive,
             drive_right = drive,
-            turn = turn
+            turn = turn,
+            arm_velocity = calc_gamepad_arm_velocity(),
+            hand_status = hand_status
         )

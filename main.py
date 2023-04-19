@@ -15,8 +15,8 @@ hand = None
 arm = None
 
 def get_robot():
-    #return mock_robot.MockRobot(debug_logger, {"koalabear": 1})
-    return Robot
+    return mock_robot.MockRobot(debug_logger, {"koalabear": 1})
+    #return Robot
 def create_debug_logger():
     global debug_logger
     if not debug_logger:

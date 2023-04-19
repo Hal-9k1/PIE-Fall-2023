@@ -11,6 +11,9 @@ class TestChassis:
     # wRadius = 2;                // radius of a wheel, inches
     # MaxX = 192;                 // maximum X value, inches, field is 12'x12'
     # MaxY = 144;                 // maximum Y value, inches, field is 12'x12'
+
+    # note: pimulator assumes a 12'x12' field, while the Spring 2023 competition is played on a
+    # 12'x16'.
     __slots__ = "_queue", "_position", "_angle", "_motors", "_debug_logger"
     def __init__(self, robot, debug_logger, starting_position, starting_angle):
         self._queue = []
@@ -36,7 +39,7 @@ class TestChassis:
 class QuadChassis:
     """The rectangular two-motor drive chassis in use since 3/13/2023."""
     __slots__ = "_motors", "_wheels", "_position", "_angle", "_queue", "_debug_logger"
-    _wheelspan = 0.3683
+    _wheelspan = util.inches_to_meters(14.5)
     def __init__(self, robot, debug_logger, starting_position, starting_angle):
         self._queue = []
         self._debug_logger = debug_logger
@@ -50,8 +53,10 @@ class QuadChassis:
         )
         ticks_per_rotation = 64 * 30.125 / 1.42 # 30.125 probably a gear ratio, 1.42 magic number
         self._wheels = util.LRStruct(
-            left = devices.Wheel(debug_logger, self._motors.left, 0.0508, ticks_per_rotation),
-            right = devices.Wheel(debug_logger, self._motors.right, 0.0508, ticks_per_rotation)
+            left = devices.Wheel(debug_logger, self._motors.left, util.inches_to_meters(2),
+                ticks_per_rotation),
+            right = devices.Wheel(debug_logger, self._motors.right, util.inches_to_meters(2),
+                ticks_per_rotation)
         )
     
     def move(self, end_pos, angle):
