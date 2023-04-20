@@ -1,2 +1,2 @@
 py preprocessor.py main.py > tmp/test.py
-cp tmp/test.py /e/test.py
+cp tmp/test.py /d/test.py

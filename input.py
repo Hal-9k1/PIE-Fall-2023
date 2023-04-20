@@ -50,7 +50,7 @@ class TankInputGenerator:
         hand_status = ((1 if (Gamepad.get_value("l_bumper") and not self._hand_open_pressed) else 0)
             - (1 if (Gamepad.get_value("l_trigger") and not self._hand_close_pressed) else 0))
         self._hand_open_pressed = Gamepad.get_value("l_bumper")
-        self._hand_closed_pressed = Gamepad.get_value("l_trigger")
+        self._hand_close_pressed = Gamepad.get_value("l_trigger")
 
         return Input(
             drive_left = drive_left,
@@ -91,7 +91,7 @@ class WeirdInputGenerator:
         hand_status = ((1 if (Gamepad.get_value("l_bumper") and not self._hand_open_pressed) else 0)
             - (1 if (Gamepad.get_value("l_trigger") and not self._hand_close_pressed) else 0))
         self._hand_open_pressed = Gamepad.get_value("l_bumper")
-        self._hand_closed_pressed = Gamepad.get_value("l_trigger")
+        self._hand_close_pressed = Gamepad.get_value("l_trigger")
         return Input(
             drive_left = drive,
             drive_right = drive,
