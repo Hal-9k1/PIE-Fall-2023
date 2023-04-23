@@ -80,6 +80,8 @@ class TestChassis(BaseQueuedChassis):
     # 12'x16'.
     __slots__ = "_motors", "_actual_motor_velocity", "_motion_start_timestamp"
     _robot_types = ("light", "medium", "heavy")
+    _wheelspan = util.inches_to_meters(20)
+
     def __init__(self, robot, debug_logger, starting_position, starting_angle, robot_type):
         super().__init__(debug_logger, starting_position, starting_angle)
         self._motors = util.LRStruct(
@@ -100,36 +102,48 @@ class TestChassis(BaseQueuedChassis):
     def _on_post_update(self):
         self._motors.left.update()
         self._motors.right.update()
-    def _update_move(self, path_data):
+    def _update_move(self, path):
         left_dist = path.get_offset_length(self._wheelspan / 2)
         right_dist = path.get_offset_length(-self._wheelspan / 2)
-        return self._update_motors(data.)
-    def _update_turn(self, angle_data):
-        return self._update_motors()
-    def _update_peripheral(self, data):
-        return data.update()
-    def _update_motors(self):
-        pass
+        return self._update_motors(left_dist, right_dist)
+    def _update_turn(self, angle):
+        goal_dist = angle / self._wheelspan / 2
+        left_dist = math.copysign(goal_dist, angle)
+        right_dist = -math.copysign(goal_dist, angle)
+        return self._update_motors(left_dist, right_dist)
+    def _update_peripheral(self, peripheral):
+        return peripheral.update()
+    def _update_motors(self, left_dist, right_dist):
+        max_abs_dist = max(abs(left_dist), abs(right_dist))
+        self._wheels.left.set_goal(left_dist, left_dist / max_abs_dist)
+        self._wheels.right.set_goal(right_dist, right_dist / max_abs_dist)
+        raise NotImplementedError()
+        # estimate time until deacceleration, then somehow handle deacceleration that before going
+        # to the next motion
     def _estimate_travel_time(self, current_velocity, dist, should_deaccelerate):
-        return 
+        # TODO: just finding the travel time is inadequate. we also need to know when to start
+        # deaccelerating, if needed
+        return
 
 class QuadChassis(BaseQueuedChassis):
     """The rectangular two-motor drive chassis in use since 3/13/2023."""
     __slots__ = "_motors", "_wheels"
     _wheelspan = util.inches_to_meters(14.5)
+    _drive_controller_id = "6_10833107448071795766"
+    _ticks_per_rotation = 64 * 30.125 / 1.42 # 30.125 probably a gear ratio, 1.42 magic number
     def __init__(self, robot, debug_logger, starting_position, starting_angle):
+        super().__init__(debug_logger, starting_position, starting_angle)
         self._motors = util.LRStruct(
-            left = (devices.Motor(robot, debug_logger, "6_10833107448071795766", "b")
+            left = (devices.Motor(robot, debug_logger, self._drive_controller_id, "b")
                 .set_pid(None, None, None).set_invert(True)), # TODO: should maybe be False
-            right = (devices.Motor(robot, debug_logger, "6_10833107448071795766", "a")
+            right = (devices.Motor(robot, debug_logger, self._drive_controller_id, "a")
                 .set_pid(None, None, None).set_invert(True))
         )
-        ticks_per_rotation = 64 * 30.125 / 1.42 # 30.125 probably a gear ratio, 1.42 magic number
         self._wheels = util.LRStruct(
             left = devices.Wheel(debug_logger, self._motors.left, util.inches_to_meters(2),
-                ticks_per_rotation),
+                self._ticks_per_rotation),
             right = devices.Wheel(debug_logger, self._motors.right, util.inches_to_meters(2),
-                ticks_per_rotation)
+                self._ticks_per_rotation)
         )
     
     def update_input(self, input):
@@ -146,14 +160,14 @@ class QuadChassis(BaseQueuedChassis):
     def _on_post_update(self):
         self._wheels.left.update()
         self._wheels.right.update()
-    def _update_move(self, path_data):
+    def _update_move(self, path):
         left_dist = path.get_offset_length(self._wheelspan / 2)
         right_dist = path.get_offset_length(-self._wheelspan / 2)
         return self._update_motors(left_dist, right_dist)
-    def _update_turn(self, angle_data):
+    def _update_turn(self, angle):
         goal_dist = angle / self._wheelspan / 2
-        left_dist = math.copysign(goal_dist, angle) #* (1 - self._wheels.left.get_goal_progress())
-        right_dist = -math.copysign(goal_dist, angle) #* (1 - self._wheels.right.get_goal_progress())
+        left_dist = math.copysign(goal_dist, angle)
+        right_dist = -math.copysign(goal_dist, angle)
         return self._update_motors(left_dist, right_dist)
     def _update_motors(self, left_dist, right_dist):
         max_abs_dist = max(abs(left_dist), abs(right_dist))
@@ -163,6 +177,6 @@ class QuadChassis(BaseQueuedChassis):
         right_progress = self._wheels.right.get_goal_progress()
         self._debug_logger.print(f"left_dist: {left_dist} right_dist: {right_dist} left_progress: {left_progress} right_progress: {right_progress}")
         return min(left_progress, right_progress) < 1
-    def _update_peripheral(self, data):
-        return data.update()
+    def _update_peripheral(self, peripheral):
+        return peripheral.update()
 
