@@ -123,7 +123,11 @@ class TestChassis(BaseQueuedChassis):
     def _estimate_travel_time(self, current_velocity, dist, should_deaccelerate):
         # TODO: just finding the travel time is inadequate. we also need to know when to start
         # deaccelerating, if needed
-        return
+        d_f = dist
+        v_max = 
+        if self._will_hit_max_velocity():
+
+        return (t_c, t_f)
 
 class QuadChassis(BaseQueuedChassis):
     """The rectangular two-motor drive chassis in use since 3/13/2023."""
@@ -135,7 +139,7 @@ class QuadChassis(BaseQueuedChassis):
         super().__init__(debug_logger, starting_position, starting_angle)
         self._motors = util.LRStruct(
             left = (devices.Motor(robot, debug_logger, self._drive_controller_id, "b")
-                .set_pid(None, None, None).set_invert(True)), # TODO: should maybe be False
+                .set_pid(None, None, None).set_invert(False)), # TODO: should maybe be False
             right = (devices.Motor(robot, debug_logger, self._drive_controller_id, "a")
                 .set_pid(None, None, None).set_invert(True))
         )
