@@ -19,8 +19,8 @@ def create_robot():
     create_debug_logger()
     global robot_object
     if not robot_object:
-        robot_object = mock_robot.MockRobot(debug_logger, {"koalabear": 2, "servocontroller": 1})
-        #robot_object = Robot
+        #robot_object = mock_robot.MockRobot(debug_logger, {"koalabear": 2, "servocontroller": 1})
+        robot_object = Robot
 def create_debug_logger():
     global debug_logger
     if not debug_logger:
@@ -30,8 +30,8 @@ def create_chassis():
     create_debug_logger()
     global chassis_object
     if not chassis_object:
-        chassis_object = chassis.QuadChassis(robot_object, debug_logger, (0, 0), 0)
-        #chassis_object = chassis.TestChassis(robot_object, (0, 0), 0, "medium")
+        #chassis_object = chassis.QuadChassis(robot_object, debug_logger, (0, 0), 0)
+        chassis_object = chassis.TestChassis(robot_object, debug_logger, (0, 0), 0, "medium")
 def create_input_generator():
     global input_generator
     if not input_generator:

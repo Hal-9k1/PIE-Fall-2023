@@ -78,18 +78,22 @@ class TestChassis(BaseQueuedChassis):
 
     # note: pimulator assumes a 12'x12' field, while the Spring 2023 competition is played on a
     # 12'x16'.
-    __slots__ = "_motors", "_actual_motor_velocity", "_motion_start_timestamp"
+    __slots__ = "_motors", "_actual_motor_velocity", "_motion_start_timestamp", "_max_acceleration", "_max_velocity"
     _robot_types = ("light", "medium", "heavy")
     _wheelspan = util.inches_to_meters(20)
 
     def __init__(self, robot, debug_logger, starting_position, starting_angle, robot_type):
         super().__init__(debug_logger, starting_position, starting_angle)
         self._motors = util.LRStruct(
-            left = devices.Motor(robot, "koala_bear", "a").set_invert(False),
-            right = devices.Motor(robot, "koala_bear", "b").set_invert(True)
+            left = devices.Motor(robot, debug_logger, "koala_bear", "a").set_invert(False),
+            right = devices.Motor(robot, debug_logger, "koala_bear", "b").set_invert(True)
         )
         if not robot_type in self._robot_types:
             raise ValueError("Invalid robot type.")
+        robot_type_num = self._robot_types.index(robot_type)
+        self._max_acceleration = (8 - robot_type_num) / 5 * 0.05413
+        self._max_velocity = robot_type_num / 5 * 1.236
+        self._actual_motor_velocity = util.LRStruct(0, 0)
     def update_input(self, input):
         self._motors.left.set_velocity(input.drive_left + input.turn)
         self._motors.right.set_velocity(input.drive_right - input.turn)
@@ -114,18 +118,42 @@ class TestChassis(BaseQueuedChassis):
     def _update_peripheral(self, peripheral):
         return peripheral.update()
     def _update_motors(self, left_dist, right_dist):
-        max_abs_dist = max(abs(left_dist), abs(right_dist))
-        self._wheels.left.set_goal(left_dist, left_dist / max_abs_dist)
-        self._wheels.right.set_goal(right_dist, right_dist / max_abs_dist)
-        raise NotImplementedError()
-        # estimate time until deacceleration, then somehow handle deacceleration that before going
-        # to the next motion
+        should_deaccelerate = len(self._queue) == 1
+        (left_deacc_time, left_finish_time) = self._estimate_travel_time(
+            self._actual_motor_velocity.left, left_dist, should_deaccelerate)
+        (right_deacc_time, right_finish_time) = self._estimate_travel_time(
+            self._actual_motor_velocity.right, right_dist, should_deaccelerate)
+        elapsed = self._motion_start_timestamp - time.time() 
+        if elapsed > min(left_deacc_time, right_deacc_time):
+            self._motors.left.stop()
+            self._motors.right.stop()
+        else:
+            max_abs_dist = max(abs(left_dist), abs(right_dist))
+            self._wheels.left.set_goal(left_dist, left_dist / max_abs_dist)
+            self._wheels.right.set_goal(right_dist, right_dist / max_abs_dist)
+        return elapsed <= min(left_finish_time, right_finish_time)
     def _estimate_travel_time(self, current_velocity, dist, should_deaccelerate):
         # TODO: just finding the travel time is inadequate. we also need to know when to start
         # deaccelerating, if needed
-        d_f = dist
-        v_max = 
-        if self._will_hit_max_velocity():
+        d_f = abs(dist)
+        v_max = self._max_velocity
+        v_i = current_velocity
+        a = self._max_acceleration
+        if should_deaccelerate:
+            if self._will_hit_max_velocity():
+                # Case 2: v_c > v_max
+                t_f = (d_f / v_max) + (v_i ** 2 / (2 * a * v_max)) + ((2 * v_max - v_i) / a)
+                t_c = t_f - (v_max / a)
+            else:
+                # Case 1: v_c <= v_max
+                # might be -2 * v_i - 1 - math.sqrt...
+                t_f = (-2 * v_i - 1 + math.sqrt((-4 * v_i ** 2) + (4 * v_i) + (64 * a * d_f) + 1)) / (4 * a)
+                t_c = (t_f / 2) - (v_i / (2 * a))
+        else:
+            # might be v_i - math.sqrt...
+            # also we might have to divide by a inside min
+            t_f = min(v_i + math.sqrt(v_i ** 2 + (2 * a * d_f)), v_max) / a
+            t_c = t_f # no deacceleration before the end
 
         return (t_c, t_f)
 
