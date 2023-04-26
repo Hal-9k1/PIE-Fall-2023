@@ -10,7 +10,7 @@ class Arm:
     _upperarm_angle_range = (0, math.pi) # in radians
     _ticks_per_rotation = 64 * 30.125 / 1.42 
     def __init__(self, debug_logger, robot):
-        self._forearm_motor = (devices.Motor(robot, debug_logger, "6_11068811781328764060", "a")
+        self._forearm_motor = (devices.Motor(robot, debug_logger, "6_4315277077938590215", "a")
             .set_pid(None, None, None))
         self._forearm_motor.reset_encoder()
         self._debug_logger = debug_logger

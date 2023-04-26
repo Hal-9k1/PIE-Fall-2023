@@ -19,19 +19,19 @@ def create_robot():
     create_debug_logger()
     global robot_object
     if not robot_object:
-        #robot_object = mock_robot.MockRobot(debug_logger, {"koalabear": 2, "servocontroller": 1})
-        robot_object = Robot
+        robot_object = mock_robot.MockRobot(debug_logger, {"koalabear": 2, "servocontroller": 1})
+        #robot_object = Robot
 def create_debug_logger():
     global debug_logger
     if not debug_logger:
-        debug_logger = util.DebugLogger(10)
+        debug_logger = util.DebugLogger(10000)
 def create_chassis():
     create_robot()
     create_debug_logger()
     global chassis_object
     if not chassis_object:
-        #chassis_object = chassis.QuadChassis(robot_object, debug_logger, (0, 0), 0)
-        chassis_object = chassis.TestChassis(robot_object, debug_logger, (0, 0), 0, "medium")
+        chassis_object = chassis.QuadChassis(robot_object, debug_logger, (0, 0), 0)
+        #chassis_object = chassis.TestChassis(robot_object, debug_logger, (0, 0), 0, "medium")
 def create_input_generator():
     global input_generator
     if not input_generator:
@@ -41,7 +41,7 @@ def create_hand():
     create_debug_logger()
     global hand
     if not hand:
-        hand = peripherals.Hand(debug_logger, devices.Servo(robot_object, "4_1577456710271169891",
+        hand = peripherals.Hand(debug_logger, devices.Servo(robot_object, "4_4022035151958244486",
             "1"))
 def create_arm():
     create_robot()
@@ -55,9 +55,9 @@ def autonomous_setup():
     create_chassis()
     #create_arm()
     #create_hand()
-    #chassis_object.turn(math.radians(45))
+    chassis_object.turn(math.radians(45))
     #chassis_object.move((4, 3), 5)
-    chassis_object.move((1, 0), 0)
+    #chassis_object.move((1, 0), 0)
     #chassis_object.peripheral_action(arm, lambda x: x.set_goal_height(0.5, 0.5))
 def autonomous_main():
     debug_logger.tick()
