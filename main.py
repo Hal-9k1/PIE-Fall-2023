@@ -24,7 +24,7 @@ def create_robot():
 def create_debug_logger():
     global debug_logger
     if not debug_logger:
-        debug_logger = util.DebugLogger(10000)
+        debug_logger = util.DebugLogger(10)
 def create_chassis():
     create_robot()
     create_debug_logger()
@@ -55,8 +55,9 @@ def autonomous_setup():
     create_chassis()
     #create_arm()
     #create_hand()
-    chassis_object.turn(math.radians(45))
-    chassis_object.move((4, 3), 5)
+    #chassis_object.turn(math.radians(45))
+    #chassis_object.move((4, 3), 5)
+    chassis_object.move((1, 0), 0)
     #chassis_object.peripheral_action(arm, lambda x: x.set_goal_height(0.5, 0.5))
 def autonomous_main():
     debug_logger.tick()

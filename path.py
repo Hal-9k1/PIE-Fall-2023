@@ -43,7 +43,11 @@ class Path:
             return ((math.atan2(c_y - self._pivot[1], a_x - self._pivot[0]) - self._start_theta)
                 * self._radius)
     def get_offset_length(self, offset):
-       return self._angle / (self._radius + offset)
+        if self._angle == 0:
+            (a_x, a_y) = self._end_pos
+            (b_x, b_y) = self._start_pos
+            return math.sqrt((a_x - b_x) ** 2 + (a_y - b_y) ** 2)
+        return self._angle / (self._radius + offset)
     
     def _calculate_arc_details(self):
         """Calculates the center and radius of the arc segment that is the path."""
