@@ -29,6 +29,7 @@ class MockRobot:
     _motor_ticks_per_sec = 2000
     def __init__(self, debug_logger, max_devices):
         print("NOTICE: MockRobot instance constructed.")
+        raise Exception("Test enhanced error handling")
         self._devices = {}
         self._device_types = {}
         self._max_devices = max_devices

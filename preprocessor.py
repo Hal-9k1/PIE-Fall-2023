@@ -126,7 +126,7 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
                 f"{indent}def wrapped(*args, **kwargs):\n",
                 f"{indent * 2}try:\n",
                 f"{indent * 3}return func(*args, **kwargs)\n",
-                f"{indent * 2}except BaseException as e:\n",
+                f"{indent * 2}except Exception as e:\n",
                 f"{indent * 3}print('Source traceback (most recent call last):')\n",
                 f"{indent * 3}frame_lines = []\n",
                 f"{indent * 3}frame = e.__traceback__.tb_frame.f_back\n",
@@ -135,28 +135,33 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
                 f"{indent * 5}module_name = '<top>'\n",
                 f"{indent * 5}line_no = f'<untranslated:{{frame.f_lineno}}>'\n",
                 f"{indent * 4}else:\n",
-                f"{indent * 5}module_name, translated_line_no = __translate_line_no(frame.f_lineno)\n",
+                f"{indent * 5}module_name, line_no = __translate_line_no(frame.f_lineno)\n",
                 f"{indent * 5}module_name += '.py'\n",
                 f"{indent * 4}frame_lines.append(f'  File \"{{module_name}}\", line {{line_no}}, in {{frame.f_code.co_name}}')\n",
                 f"{indent * 4}frame = frame.f_back\n",
                 f"{indent * 3}print('\\n'.join(reversed(frame_lines)))\n",
                 f"{indent * 3}print(type(e).__name__ + (': ' if str(e) else '') + str(e))\n",
-                f"{indent * 3}exit()\n",
+                f"{indent * 2}exit()\n", # exit outside of except block so we don't reraise
                 f"{indent}return wrapped\n",
                 f"def __translate_line_no(line_no):\n",
             ]
             after_translate_func = [
                 f"{indent}else:\n",
-                f"{indent * 2}raise ValueError(f'Failed to translate line {{line_no}} to source.')\n"
+                f"{indent * 2}return '<helper code>', line_no\n",
+                #f"{indent * 2}raise ValueError(f'Failed to translate line {{line_no}} to source.')\n"
             ]
-            running_line_num = len(strings) + len(after_translate_func) + 2 * len(module_list) # two lines added per module
+            running_line_num = 1 + len(strings) + len(after_translate_func) + 2 * len(module_list) # two lines added per module
             module_line_entries = []
             for module in module_list:
                 module_line_entries.append(
-                    f"{indent}{'if' if module == module_list[-1] else 'elif'} line_no >= {running_line_num}:\n"
+                    f"{indent}elif line_no >= {running_line_num}:\n"
                     f"{indent * 2}return '{module.name}', line_no - {running_line_num + 5}\n"
                 )
                 running_line_num += len(module.body_text.splitlines())
+            module_line_entries.append(
+                f"{indent}if line_no >= {running_line_num}:\n"
+                f"{indent * 2}return '{''.join(os.path.basename(file_path).split('.')[:-1])}', line_no - {running_line_num + 7}\n"
+            )
             strings.extend(reversed(module_line_entries))
             strings.extend(after_translate_func)
             strings.extend(module.body_text for module in module_list)
@@ -164,7 +169,6 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
             strings.extend(module_buffer)
             return "".join(strings)
         else:
-            #print(f"module {module_name} preview:{''.join(module_buffer)}")
             return "".join(module_buffer)
 
 if __name__ == "__main__":
