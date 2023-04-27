@@ -108,17 +108,52 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
                     module_list.insert(import_cursor, ModuleInfo(imported_module_name, func_call,
                         "\n".join(imported_module_buffer)))
             else:
+                if words[0] == "def" and is_top_level:
+                    module_buffer.append(line[:line.find("def")] + "@__enhanced_debug_info\n")
                 module_buffer.append(line)
         if is_top_level:
             strings = [
-                f"class __ModuleAttrDict:\n"
-                f"{indent}def __init__(self, dictionary=None):\n"
-                f"{indent * 2}self.__dict__ = dictionary or {{}}\n"
-                f"{indent}def __getitem__(self, key):\n"
-                f"{indent * 2}return self.__dict__[key]\n"
-                f"{indent}def __setitem__(self, key, value):\n"
-                f"{indent * 2}self.__dict__[key] = value\n\n"
+                f"class __ModuleAttrDict:\n",
+                f"{indent}def __init__(self, dictionary=None):\n",
+                f"{indent * 2}self.__dict__ = dictionary or {{}}\n",
+                f"{indent}def __getitem__(self, key):\n",
+                f"{indent * 2}return self.__dict__[key]\n",
+                f"{indent}def __setitem__(self, key, value):\n",
+                f"{indent * 2}self.__dict__[key] = value\n",
+                f"def __enhanced_debug_info(func):\n",
+                f"{indent}import functools\n",
+                f"{indent}@functools.wraps(func)\n",
+                f"{indent}def wrapped(*args, **kwargs):\n",
+                f"{indent * 2}try:\n",
+                f"{indent * 3}return func(*args, **kwargs)\n",
+                f"{indent * 2}except Exception as e:\n",
+                f"{indent * 3}print('Source traceback (most recent call last):')\n",
+                f"{indent * 3}frame_lines = []\n",
+                f"{indent * 3}frame = e.__traceback__.tb_frame.f_back\n",
+                f"{indent * 3}while frame:\n",
+                f"{indent * 4}module_name, translated_line_no = __translate_line_no(frame.f_lineno)\n",
+                f"{indent * 4}frame_lines.append(f'  File \"{{module_name}}.py\", line {{translated_line_no}}, in {{frame.f_code.co_name}}')\n",
+                f"{indent * 4}frame = frame.f_back\n",
+                f"{indent * 3}print('\\n'.join(reversed(frame_lines)))\n",
+                f"{indent * 3}print(f'{{type(e).__name__}}: {{str(e)}}')\n",
+                f"{indent * 3}exit()\n",
+                f"{indent}return wrapped\n",
+                f"def __translate_line_no(line_no):\n",
             ]
+            after_translate_func = [
+                f"{indent}else:\n",
+                f"{indent * 2}raise ValueError(f'Failed to translate line {{line_no}} to source.')\n"
+            ]
+            running_line_num = len(strings) + len(after_translate_func) + 2 * len(module_list) # two lines added per module
+            module_line_entries = []
+            for module in module_list:
+                module_line_entries.append(
+                    f"{indent}{'if' if module == module_list[-1] else 'elif'} line_no >= {running_line_num}:\n"
+                    f"{indent * 2}return '{module.name}', line_no - {running_line_num + 5}\n"
+                )
+                running_line_num += len(module.body_text.splitlines())
+            strings.extend(reversed(module_line_entries))
+            strings.extend(after_translate_func)
             strings.extend(module.body_text for module in module_list)
             strings.append("# End imports.\n")
             strings.extend(module_buffer)

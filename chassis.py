@@ -113,8 +113,9 @@ class TestChassis(BaseQueuedChassis):
     def _on_start_new_motion(self, motion):
         self._motion_start_timestamp = 0
     def _on_queue_finish(self):
-        self._motors.left.stop()
-        self._motors.right.stop()
+        # might be redundant
+        self._motors.left.set_velocity(0)
+        self._motors.right.set_velocity(0)
     def _on_post_update(self):
         pass
     def _get_move_wheel_dists(self, path):
@@ -191,7 +192,7 @@ class TestChassis(BaseQueuedChassis):
     def _estimate_travel_time(self, current_velocity, dist, should_deaccelerate):
         d_f = abs(dist)
         v_max = self._max_velocity
-        v_i = current_velocity
+        v_i = abs(current_velocity)
         a = self._max_acceleration
         if should_deaccelerate:
             if self._will_hit_max_velocity(current_velocity, dist):
@@ -212,11 +213,11 @@ class TestChassis(BaseQueuedChassis):
 
         return (t_c, t_f)
     def _will_hit_max_velocity(self, current_velocity, dist):
-        raise NotImplementedError("I haven't the faintest idea what goes here.") # TODO: please help
+        return (self._max_velocity ** 2) > (current_velocity ** 2 + 2 * self._max_acceleration * abs(dist))
     def _can_deaccelerate_before_dist(self, current_velocity, dist):
-        v_i = current_velocity
+        v_i = abs(current_velocity)
         a = self._max_acceleration
-        return dist <= v_i ** 2 * a + 0.5 * a ** 3 + v_i ** 4
+        return abs(dist) <= v_i ** 2 * a + 0.5 * a ** 3 + v_i ** 4
 
 class QuadChassis(BaseQueuedChassis):
     """The rectangular two-motor drive chassis in use since 3/13/2023."""
