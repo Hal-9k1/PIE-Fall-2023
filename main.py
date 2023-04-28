@@ -19,8 +19,8 @@ def create_robot():
     create_debug_logger()
     global robot_object
     if not robot_object:
-        robot_object = mock_robot.MockRobot(debug_logger, {"koalabear": 2, "servocontroller": 1})
-        #robot_object = Robot
+        #robot_object = mock_robot.MockRobot(debug_logger, {"koalabear": 2, "servocontroller": 1})
+        robot_object = Robot
 def create_debug_logger():
     global debug_logger
     if not debug_logger:

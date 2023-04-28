@@ -90,9 +90,10 @@ class TestChassis(BaseQueuedChassis):
     # 12'x16'. this shouldn't matter for the purposes of testing since we don't intend to leave
     # our half of the field.
     __slots__ = ("_motors", "_prev_motor_velocity", "_motion_start_timestamp", "_max_acceleration",
-        "_max_velocity")
+        "_max_velocity", "_wheelspan")
     _robot_types = ("light", "medium", "heavy")
-    _wheelspan = util.inches_to_meters(20)
+    _robot_type_wheelspans = (9.06, 12.39, 8.98)
+    _tick_rate_ms = 50
 
     def __init__(self, robot, debug_logger, starting_position, starting_angle, robot_type):
         super().__init__(debug_logger, starting_position, starting_angle)
@@ -103,15 +104,17 @@ class TestChassis(BaseQueuedChassis):
         if not robot_type in self._robot_types:
             raise ValueError("Invalid robot type.")
         robot_type_num = self._robot_types.index(robot_type) + 3
-        self._max_acceleration = util.inches_to_meters((8 - robot_type_num) / 5 * 0.05413) # knowing PIE this is probably in inches/sec^2
-        self._max_velocity = util.inches_to_meters(robot_type_num / 5 * 1.236) # same above
+        self._max_acceleration = util.inches_to_meters((8 - robot_type_num) / 5 * 0.05413) * (1000 / self._tick_rate_ms) # knowing PIE this is probably in inches/sec^2
+        self._max_velocity = util.inches_to_meters(robot_type_num / 5 * 1.236) * (1000 / self._tick_rate_ms) # same above
+        print(f"max accel: {self._max_acceleration} max vel: {self._max_velocity}")
+        self._wheelspan = self._robot_type_wheelspans[self._robot_types.index(robot_type)]
         self._prev_motor_velocity = util.LRStruct(0, 0)
     def update_input(self, input):
         self._motors.left.set_velocity(input.drive.left + input.turn)
         self._motors.right.set_velocity(input.drive.right - input.turn)
 
     def _on_start_new_motion(self, motion):
-        self._motion_start_timestamp = 0
+        self._motion_start_timestamp = time.time()
     def _on_queue_finish(self):
         # might be redundant
         self._motors.left.set_velocity(0)
@@ -164,8 +167,6 @@ class TestChassis(BaseQueuedChassis):
     def _update_peripheral(self, peripheral):
         return peripheral.update()
     def _update_motors(self, left_dist, right_dist):
-        # TODO: what if max velocity is too high for the last motion? or the second to last? just
-        # checking whether we're on the last queued motion isn't enough.
         if len(self._queue) == 1:
             should_deaccelerate = True
         else:
@@ -178,7 +179,8 @@ class TestChassis(BaseQueuedChassis):
         (right_deacc_time, right_finish_time) = self._estimate_travel_time(
             self._get_actual_motor_velocity(1), right_dist, should_deaccelerate)
         elapsed = time.time() - self._motion_start_timestamp
-        self._debug_logger.print(f"left_deacc_time = {left_deacc_time} left_finish_time = {left_finish_time}"
+        self._debug_logger.print(f"left actual velocity = {self._get_actual_motor_velocity(0)} right actual velocity"
+            f" = {self._get_actual_motor_velocity(1)} left_deacc_time = {left_deacc_time} left_finish_time = {left_finish_time}"
             f"\nright_deacc_time = {right_deacc_time} right_finish_time = {right_finish_time} elapsed = {elapsed}"
             f"\nleft_dist = {left_dist} right_dist = {right_dist}")
         if elapsed > min(left_deacc_time, right_deacc_time):
@@ -229,7 +231,7 @@ class QuadChassis(BaseQueuedChassis):
         super().__init__(debug_logger, starting_position, starting_angle)
         self._motors = util.LRStruct(
             left = (devices.Motor(robot, debug_logger, self._drive_controller_id, "b")
-                .set_pid(None, None, None).set_invert(False)), # TODO: should maybe be False
+                .set_pid(None, None, None).set_invert(False)),
             right = (devices.Motor(robot, debug_logger, self._drive_controller_id, "a")
                 .set_pid(None, None, None).set_invert(True))
         )
