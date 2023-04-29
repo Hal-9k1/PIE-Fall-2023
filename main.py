@@ -60,8 +60,8 @@ def autonomous_setup():
     chassis_object.move((1, 0), 0)
     #chassis_object.peripheral_action(arm, lambda x: x.set_goal_height(0.5, 0.5))
 def autonomous_main():
-    debug_logger.tick()
     chassis_object.update()
+    debug_logger.tick()
 def teleop_setup():
     create_debug_logger()
     create_chassis()
@@ -69,9 +69,9 @@ def teleop_setup():
     #create_hand()
     create_input_generator()
 def teleop_main():
-    debug_logger.tick()
     input_object = input_generator.generate_gamepad()
     #debug_logger.print(str(input_object))
     chassis_object.update_input(input_object)
     #arm.update_input(input_object)
     #hand.update_input(input_object)
+    debug_logger.tick()

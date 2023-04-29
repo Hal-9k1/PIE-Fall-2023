@@ -15,8 +15,8 @@ class QueuedMotion:
             self._setup_func()
     def update(self):
         return self._update_func(self._data)
-    def get_update_func(self):
-        return self._update_func
+    def match_update_func(self, update_func):
+        return self._update_func == update_func
     def get_data(self):
         return self._data
 
@@ -28,8 +28,9 @@ class BaseQueuedChassis:
         self._position = starting_position
         self._angle = starting_angle
         self._is_idle = True
-    def move(self, end_pos, angle):
+    def move(self, end_pos, UNUSED_angle):
         """Autonomous mode only. Moves the chassis along a path."""
+        angle = 2 * (self._angle - math.atan2(end_pos[1] - self._position[1], end_pos[0] - self._position[0]))
         self._queue.append(QueuedMotion(self._update_move,
             path.Path(self._position, end_pos, angle)))
         self._position = end_pos
@@ -122,11 +123,11 @@ class TestChassis(BaseQueuedChassis):
         self._motors.right.set_velocity(0)
     def _on_post_update(self):
         pass
-    def _get_move_wheel_dists(self, path):
+    def _calculate_move(self, path):
         left_dist = path.get_offset_length(self._wheelspan / 2)
         right_dist = path.get_offset_length(-self._wheelspan / 2)
         return (left_dist, right_dist)
-    def _get_turn_wheel_dists(self, angle):
+    def _calculate_turn(self, angle):
         goal_dist = angle / self._wheelspan / 2
         left_dist = math.copysign(goal_dist, angle)
         right_dist = -math.copysign(goal_dist, angle)
@@ -135,13 +136,13 @@ class TestChassis(BaseQueuedChassis):
         left_dist = 0
         right_dist = 0
         for motion in motion_list:
-            if motion.get_update_func() == self._update_move:
-                get_wheel_dists = self._get_move_wheel_dists
-            elif motion.get_update_func() == self._update_turn:
-                get_wheel_dists = self._get_turn_wheel_dists
-            elif motion.get_update_func() == self._update_peripheral:
-                get_wheel_dists = lambda: (0, 0)
-            wheel_dists = get_wheel_dists(motion.get_data())
+            if motion.match_update_func(self._update_move):
+                calc_func = self._calculate_move
+            elif motion.match_update_func(self._update_turn):
+                calc_func = self._calculate_turn
+            elif motion.match_update_func(self._update_peripheral):
+                calc_func = lambda: (0, 0)
+            wheel_dists = calc_func(motion.get_data())
             left_dist += wheel_dists[0]
             right_dist += wheel_dists[1]
         return (left_dist, right_dist)
@@ -162,9 +163,9 @@ class TestChassis(BaseQueuedChassis):
         progress = min(1, elapsed * self._max_acceleration / delta)
         return prev_velocity + progress * delta
     def _update_move(self, path):
-        return self._update_motors(*self._get_move_wheel_dists(path))
+        return self._update_motors(*self._calculate_move(path))
     def _update_turn(self, angle):
-        return self._update_motors(*self._get_turn_wheel_dists(angle))
+        return self._update_motors(*self._calculate_turn(angle))
     def _update_peripheral(self, peripheral):
         return peripheral.update()
     def _update_motors(self, left_dist, right_dist):
@@ -251,28 +252,44 @@ class QuadChassis(BaseQueuedChassis):
     def _on_start_new_motion(self, motion):
         self._motors.left.reset_encoder()
         self._motors.right.reset_encoder()
+        if motion.match_update_func(self._update_move):
+            calc_func = self._calculate_move
+        elif motion.match_update_func(self._update_turn):
+            calc_func = self._calculate_turn
+        elif motion.match_update_func(self._update_peripheral):
+            calc_func = lambda: (0, 0)
+        left_dist, right_dist = calc_func(motion.get_data())
+        max_abs_dist = max(abs(left_dist), abs(right_dist)) or 1 # don't divide by 0
+        self._wheels.left.set_goal(left_dist, left_dist / max_abs_dist)
+        self._wheels.right.set_goal(right_dist, right_dist / max_abs_dist)
     def _on_queue_finish(self):
         self._wheels.left.stop()
         self._wheels.right.stop()
     def _on_post_update(self):
         self._wheels.left.update()
         self._wheels.right.update()
-    def _update_move(self, path):
+    def _calculate_move(self, path):
         left_dist = path.get_offset_length(self._wheelspan / 2)
         right_dist = path.get_offset_length(-self._wheelspan / 2)
-        return self._update_motors(left_dist, right_dist)
-    def _update_turn(self, angle):
+        return left_dist, right_dist
+    def _update_move(self, path):
+        return self._update_motors(*self._calculate_move(path))
+    def _calculate_turn(self, angle):
         goal_dist = angle / self._wheelspan / 2
         left_dist = math.copysign(goal_dist, angle)
         right_dist = -math.copysign(goal_dist, angle)
-        return self._update_motors(left_dist, right_dist)
+        return left_dist, right_dist
+    def _update_turn(self, angle):
+        return self._update_motors(*self._calculate_turn(angle))
     def _update_motors(self, left_dist, right_dist):
         max_abs_dist = max(abs(left_dist), abs(right_dist))
-        self._wheels.left.set_goal(left_dist, left_dist / max_abs_dist)
-        self._wheels.right.set_goal(right_dist, right_dist / max_abs_dist)
         left_progress = self._wheels.left.get_goal_progress()
         right_progress = self._wheels.right.get_goal_progress()
-        self._debug_logger.print(f"left_dist: {left_dist} right_dist: {right_dist} left_progress: {left_progress} right_progress: {right_progress}")
+        # TODO: balance velocities using progress
+        self._wheels.left.set_velocity(left_dist / max_abs_dist)
+        self._wheels.right.set_velocity(right_dist / max_abs_dist)
+        self._debug_logger.print(f"left_dist: {left_dist} right_dist: {right_dist} left_progress: "
+            f"{left_progress} right_progress: {right_progress}")
         return min(left_progress, right_progress) < 1
     def _update_peripheral(self, peripheral):
         return peripheral.update()

@@ -61,20 +61,21 @@ class Wheel:
         self._goal_pos = math.ceil(goal / (self._radius * 2 * math.pi) * self._ticks_per_rot) 
         self._motor.set_velocity(math.copysign(velocity, self._goal_pos))
         self._velocity = velocity
+    def set_velocity(self, velocity):
+        if self.get_goal_progress() < 1:
+            self._motor.set_velocity(math.copysign(velocity, self._goal_pos))
     def get_goal_progress(self):
-        if :
+        self._debug_logger.print(f"{self._motor._motor} goal pos: {self._goal_pos} encoder: {self._motor.get_encoder()} start pos: {self._start_pos}")
+        if self._start_pos == None:
             return 0
         if self._goal_pos == 0:
             #print("goal progress is 0 for some reason")
             return 1
-        #self._debug_logger.print(self._motor.get_encoder())
-        return 1 - ((self._goal_pos - self._motor.get_encoder()) / (self._goal_pos - self._start_pos))
+        return (self._motor.get_encoder() - self._start_pos) / (self._goal_pos - self._start_pos)
     def stop(self):
         self._goal_pos = self._motor.get_encoder()
         self._motor.set_velocity(0)
     def update(self):
-        if not self._initialized:
-            return # no commands given yet
         if self.get_goal_progress() >= 1:
             self._motor.set_velocity(0)
 
