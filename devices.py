@@ -44,6 +44,26 @@ class Motor:
     def _get(self, key):
         return self._robot.get_value(self._controller, key + "_" + self._motor)
     
+class MotorPair(Motor):
+    __slots__ = "_paired_motor"
+    def __init__(self, robot, debug_logger, controller_id, motor_suffix,
+        paired_controller_id, paired_motor_suffix):
+        super().__init__(self, robot, debug_logger, controller_id, motor_suffix)
+        self._paired_motor = Motor(robot, debug_logger, paired_controlled_id,
+            paired_motor_suffix).set_invert(True)
+    def set_invert(self, invert):
+        super().set_invert(self, invert)
+        self._paired_motor.set_invert(not invert)
+    def set_deadband(self, deadband):
+        super().set_deadband(self, deadband)
+        self._paired_motor.set_deadband(deadband)
+    def set_pid(self, p, i, d):
+        super().set_pid(self, p, i, d)
+        self._paired_motor.set_pid(p, i, d)
+    def set_velocity(self, velocity):
+        super().set_velocity(self, velocity)
+        self._paired_motor.set_velocity(velocity)
+
 class Wheel:
     """Represents a wheel that may be ran to a goal position."""
     # goal and radius are in meters
