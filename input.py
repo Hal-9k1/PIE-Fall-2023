@@ -1,17 +1,19 @@
 import util
 
 class Input:
-    __slots__ = "drive", "turn", "arm_velocity", "hand_status"
-    def __init__(self, drive_left, drive_right, turn, arm_velocity, hand_status):
+    __slots__ = "drive", "turn", "elbow_velocity", "hand_status"
+    def __init__(self, drive_left, drive_right, turn, elbow_velocity, forearm_goal, forearm_velocity, hand_status):
         self.drive = util.LRStruct(left = drive_left, right = drive_right)
         self.turn = turn
-        self.arm_velocity = arm_velocity
+        self.elbow_velocity = arm_velocity
+        self.forearm_goal = forearm_goal
+        self.forearm_velocity = forearm_velocity
         self.hand_status = hand_status
     def __str__(self):
         return (f"Input: drive = {{{self.drive.left}, {self.drive.right}}} turn = {self.turn}"
-            f" arm_velocity = {self.arm_velocity} hand_status = {self.hand_status}")
+            f" elbow_velocity = {self.arm_velocity} hand_status = {self.hand_status}")
 
-def calc_gamepad_arm_velocity():
+def calc_gamepad_elbow_velocity():
     arm_bias = 0.1
     arm_strength = 0.4
     return ((arm_strength - arm_bias if Gamepad.get_value("r_bumper") else 0)
@@ -38,8 +40,12 @@ class TankInputGenerator:
             turn = 0,
             # who knows if these keybinds make sense, the peripherals are really meant to be
             # controlled by gamepad...
-            arm_velocity = ((1 if Keyboard.get_value("q") else 0)
+            elbow_velocity = ((1 if Keyboard.get_value("q") else 0)
                 - (1 if Keyboard.get_value("a") else 0)),
+            forearm_goal = (0.75 if Keyboard.get_value("p") else
+                (0 if Keyboard.get_value("u") else None)),
+            forearm_velocity = ((1 if Keyboard.get_value("o") else 0)
+                - (1 if Keyboard.get_value("i") else 0)),
             hand_status = ((1 if Keyboard.get_value("e") else 0)
                 - (1 if Keyboard.get_value("d") else 0))
         )
@@ -59,7 +65,9 @@ class TankInputGenerator:
             drive_left = drive_left,
             drive_right = drive_right,
             turn = 0,
-            arm_velocity = calc_gamepad_arm_velocity(),
+            elbow_velocity = calc_gamepad_arm_velocity(),
+            forearm_goal = None, # TODO: decide on keybinds
+            forearm_velocity = 0,
             hand_status = hand_status
         )
 
@@ -79,8 +87,12 @@ class WeirdInputGenerator:
             drive_left = drive,
             drive_right = drive,
             turn = (1 if Keyboard.get_value("d") else 0) - (1 if Keyboard.get_value("a") else 0),
-            arm_velocity = ((1 if Keyboard.get_value("r") else 0)
+            elbow_velocity = ((1 if Keyboard.get_value("r") else 0)
                 - (1 if Keyboard.get_value("f") else 0)),
+            forearm_goal = (0.75 if Keyboard.get_value("p") else
+                (0 if Keyboard.get_value("u") else None)),
+            forearm_velocity = ((1 if Keyboard.get_value("o") else 0)
+                - (1 if Keyboard.get_value("i") else 0)),
             hand_status = ((1 if Keyboard.get_value("t") else 0)
                 - (1 if Keyboard.get_value("g") else 0))
         )
@@ -99,6 +111,8 @@ class WeirdInputGenerator:
             drive_left = drive,
             drive_right = drive,
             turn = turn,
-            arm_velocity = calc_gamepad_arm_velocity(),
+            elbow_velocity = calc_gamepad_arm_velocity(),
+            forearm_goal = None, # TODO: decide on keybinds
+            forearm_velocity = 0,
             hand_status = hand_status
         )

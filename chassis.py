@@ -107,7 +107,8 @@ class TestChassis(BaseQueuedChassis):
         self._max_acceleration = util.inches_to_meters((8 - robot_type_num) / 5 * 0.05413) * (1000 / self._tick_rate_ms) # knowing PIE this is probably in inches/sec^2
         self._max_velocity = util.inches_to_meters(robot_type_num / 5 * 1.236) * (1000 / self._tick_rate_ms) # same above
         print(f"max accel: {self._max_acceleration} max vel: {self._max_velocity}")
-        self._wheelspan = self._robot_type_wheelspans[self._robot_types.index(robot_type)]
+        self._wheelspan = util.inches_to_meters(
+            self._robot_type_wheelspans[self._robot_types.index(robot_type)])
         self._prev_motor_velocity = util.LRStruct(0, 0)
     def update_input(self, input):
         self._motors.left.set_velocity(input.drive.left + input.turn)
@@ -226,7 +227,7 @@ class QuadChassis(BaseQueuedChassis):
     __slots__ = "_motors", "_wheels"
     _wheelspan = util.inches_to_meters(14.5)
     _drive_controller_id = "6_10833107448071795766"
-    _ticks_per_rotation = 64 * 30.125 / 1.42 # 30.125 probably a gear ratio, 1.42 magic number
+    _ticks_per_rotation = 475 #64 * 30.125 / 1.42 # 30.125 probably a gear ratio, 1.42 magic number
     def __init__(self, robot, debug_logger, starting_position, starting_angle):
         super().__init__(debug_logger, starting_position, starting_angle)
         self._motors = util.LRStruct(
