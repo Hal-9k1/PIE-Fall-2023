@@ -169,13 +169,14 @@ class TestChassis(BaseQueuedChassis):
     def _update_peripheral(self, peripheral):
         return peripheral.update()
     def _update_motors(self, left_dist, right_dist):
-        if len(self._queue) == 1:
-            should_deaccelerate = True
-        else:
-            future_motor_dists = self._sum_wheel_dists(self._queue[1:])
-            min_dist_idx = 0 if future_motor_dists[0] < future_motor_dists[1] else 1
-            should_deaccelerate = not self._can_deaccelerate_before_dist(
-                self._get_actual_motor_velocity(min_dist_idx), future_motor_dists[min_dist_idx])
+        #if len(self._queue) == 1:
+        #    should_deaccelerate = True
+        #else:
+        #    future_motor_dists = self._sum_wheel_dists(self._queue[1:])
+        #    min_dist_idx = 0 if future_motor_dists[0] < future_motor_dists[1] else 1
+        #    should_deaccelerate = not self._can_deaccelerate_before_dist(
+        #        self._get_actual_motor_velocity(min_dist_idx), future_motor_dists[min_dist_idx])
+        should_deaccelerate = False # TODO: why
         (left_deacc_time, left_finish_time) = self._estimate_travel_time(
             self._get_actual_motor_velocity(0), left_dist, should_deaccelerate)
         (right_deacc_time, right_finish_time) = self._estimate_travel_time(
