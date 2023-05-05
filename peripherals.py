@@ -3,16 +3,17 @@ import util
 import math
 
 class Arm:
-    __slots__ = "_forearm_motor", "_forearm_goal_encoder", "_forearm_start_encoder"
+    __slots__ = "_forearm_motor", "_forearm_goal_encoder", "_forearm_start_encoder", "_debug_logger"
     _forearm_length = util.inches_to_meters(18)
     _upperarm_length = util.inches_to_meters(10.1)
     _upperarm_mount_height = util.inches_to_meters(7)
-    _upperarm_angle_range = (0, math.pi / 2) # in radians
+    _upperarm_angle_range = (0, math.pi) # in radians
     _ticks_per_rotation = 64 * 30.125 / 1.42 
     def __init__(self, debug_logger, robot):
         self._forearm_motor = (devices.Motor(robot, debug_logger, "6_11068811781328764060", "a")
-            .set_pid(None, None, None)) # y opens a closes
+            .set_pid(None, None, None))
         self._forearm_motor.reset_encoder()
+        self._debug_logger = debug_logger
     def set_goal_height(self, goal_height, velocity):
         if not ((self._upperarm_mount_height + self._upperarm_length - self._forearm_length)
             < goal_height < (self._upperarm_mount_height + self._upperarm_length
@@ -26,19 +27,29 @@ class Arm:
         if self._forearm_start_encoder == None:
             return
         encoder = self._forearm_motor.get_encoder()
-        start_encoder_diff = encoder - self._forearm_start_encoder
+        start_encoder_diff = self._forearm_start_encoder - self._forearm_goal_encoder
         encoder_diff = encoder - self._forearm_goal_encoder
-        if (encoder < self._upperarm_angle_range[0] / (2 * math.pi) * self._ticks_per_rotation
-            or encoder > self._upperarm_angle_range[1] / (2 * math.pi) * self._ticks_per_rotation
+        if (not self._is_forearm_in_range()
             or math.copysign(start_encoder_diff, encoder_diff) != start_encoder_diff):
             forearm_velocity = 0
+            self._debug_logger.print_once("Arm.update: motion completed", "Arm motion completed."
+                f" encoder: {encoder} encoder lower bound: {self._upperarm_angle_range[0] / (2 * math.pi) * self._ticks_per_rotation}"
+                f" encoder upper bound: {self._upperarm_angle_range[1] / (2 * math.pi) * self._ticks_per_rotation}"
+                f" was in range: {self._is_forearm_in_range()}")
         else:
-            forearm_velocity = math.copysign(1, start_encoder_diff)
+            forearm_velocity = math.copysign(1, encoder_diff)
         self._forearm_motor.set_velocity(forearm_velocity)
-        print(f"forearm velocity: {forearm_velocity}")
+        print(f"forearm velocity: {forearm_velocity} encoder: {encoder} start_encoder_diff: {start_encoder_diff} encoder_diff: {encoder_diff}")
         return forearm_velocity != 0
     def update_input(self, input_object):
-        self._forearm_motor.set_velocity(input_object.arm_velocity)
+        self._forearm_motor.set_velocity(input_object.arm_velocity if self._is_forearm_in_range()
+            else 0)
+
+    def _is_forearm_in_range(self):
+        encoder = self._forearm_motor.get_encoder()
+        return (encoder < self._upperarm_angle_range[0] / (2 * math.pi) * self._ticks_per_rotation
+            or encoder > self._upperarm_angle_range[1] / (2 * math.pi) * self._ticks_per_rotation) 
+
 class Hand:
     __slots__ = "_debug_logger", "_servo", "_position" 
     _move_increment = 5/90 # servo accepts a number in degrees (hopefully)

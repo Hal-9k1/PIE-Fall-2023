@@ -62,7 +62,7 @@ class MockRobot:
                     break
             if not found_device_type:
                 raise ValueError(f"Unrecognized device property {value_name}.")
-            if not device_type in self._max_devices or (self._device_counts[device_type] > self._max_devices[device_type]):
+            if not device_type in self._max_devices or (self._device_counts[device_type] >= self._max_devices[device_type]):
                 raise ValueError(f"Cannot initialize more devices of type {device_type}. Check the id for typos.")
             self._device_counts[device_type] += 1
             device = {}
