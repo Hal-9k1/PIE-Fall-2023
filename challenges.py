@@ -83,15 +83,27 @@ def ring_toss(chance_matrix):
     return max_pos
 
 def ac_transit(travel_map):
+    transposed_map = {loc: [other for other in travel_map.keys() if loc in travel_map[other]]
+        for loc in travel_map.keys()}
+    stack = []
+    visited = set()
+    def explore(loc):
+        if not loc in visited:
+            visited.add(loc)
+            for next_loc in travel_map[loc]:
+                explore(next_loc)
+            stack.append(loc)
+    for loc in travel_map.keys():
+        explore(loc)
     connected_areas = []
-    for loc_from, loc_tos in travel_map.items():
-        current_area = None
-        for connected_area in connected_areas:
-            if loc_from in connected_area:
-                current_area = connected_area
-                break
-        if not current_area:
-            current_area = [loc_from]
-            connected_areas.append(current_area)
-        current_area.extend([loc_to for loc_to in loc_tos if (loc_from in travel_map[loc_to]) and (not loc_to in current_area)])
+    def connect(area, loc):
+        if not any(loc in area for area in connected_areas):
+            area.append(loc)
+            for next_loc in transposed_map[loc]:
+                connect(area, next_loc)
+    for loc in reversed(stack):
+        connected_areas.append([])
+        connect(connected_areas[-1], loc)
+        if not connected_areas[-1]:
+            del connected_areas[-1]
     return connected_areas
