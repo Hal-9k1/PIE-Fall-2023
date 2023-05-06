@@ -44,7 +44,7 @@ class MockRobot:
         return self._devices[device_id][value_name]
     def set_value(self, device_id, value_name, value):
         self._check_property(device_id, value_name)
-        #self._debug_logger.print(f"set:{device_id},{value_name}={str(value)}")
+        self._debug_logger.print(f"set:{device_id},{value_name}={str(value)}")
         if self._device_types[device_id] == "koalabear":
             self._update_koalabear(device_id)
         expected_type = type(self._devices[device_id][value_name])
