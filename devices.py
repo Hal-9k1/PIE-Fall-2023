@@ -2,15 +2,17 @@ import math
 
 class Motor:
     """Wraps a KoalaBear-controlled motor."""
-    __slots__ = "_controller", "_motor", "_robot", "_debug_logger"
+    __slots__ = "_controller", "_motor", "_robot", "_debug_logger", "_is_inverted"
     def __init__(self, robot, debug_logger, controller_id, motor):
         self._controller = controller_id
         self._motor = motor
         self._robot = robot
         self._debug_logger = debug_logger
+        self._is_inverted = False
     
     def set_invert(self, invert):
         self._set("invert", invert)
+        self._is_inverted = invert
         return self
     def set_deadband(self, deadband):
         self._set("deadband", deadband)
@@ -33,7 +35,7 @@ class Motor:
     def get_velocity(self):
         return self._get("velocity")
     def get_encoder(self):
-        return self._get("enc")
+        return self._get("enc") * (-1 if self._is_inverted else 1)
     def reset_encoder(self):
         self._set("enc", 0)
     
