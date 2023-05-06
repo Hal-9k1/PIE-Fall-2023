@@ -7,6 +7,9 @@ class Input:
         self.turn = turn
         self.arm_velocity = arm_velocity
         self.hand_status = hand_status
+    def __str__(self):
+        return (f"Input: drive = {{{self.drive.left}, {self.drive.right}}} turn = {self.turn}"
+            f" arm_velocity = {self.arm_velocity} hand_status = {self.hand_status}")
 
 def calc_gamepad_arm_velocity():
     arm_bias = 0.1

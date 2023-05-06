@@ -28,6 +28,7 @@ class MockRobot:
     }
     _motor_ticks_per_sec = 2000
     def __init__(self, debug_logger, max_devices):
+        print("NOTICE: MockRobot instance constructed.")
         self._devices = {}
         self._device_types = {}
         self._max_devices = max_devices
@@ -82,5 +83,5 @@ class MockRobot:
             raise ValueError("Koalabear velocity a is out of bounds.")
         if abs(device["velocity_b"]) > 1:
             raise ValueError("Koalabear velocity b is out of bounds.")
-        device["enc_a"] += device["velocity_a"] * dt * self._motor_ticks_per_sec #* (-1 if device["invert_a"] else 1)
-        device["enc_b"] += device["velocity_b"] * dt * self._motor_ticks_per_sec #* (-1 if device["invert_b"] else 1)
+        device["enc_a"] += device["velocity_a"] * dt * self._motor_ticks_per_sec * (-1 if device["invert_a"] else 1)
+        device["enc_b"] += device["velocity_b"] * dt * self._motor_ticks_per_sec * (-1 if device["invert_b"] else 1)
