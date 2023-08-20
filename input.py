@@ -42,7 +42,7 @@ class BaseInputGenerator:
         elif button in self._buttons_pressed:
             self._buttons_pressed.remove(button)
         return was_pressed
-    def _bidirectional_input(self, up_input, down_input, up_input_weight=1, down_input_weight=1):
+    def _bidi_input(self, up_input, down_input, up_input_weight=1, down_input_weight=1):
         return (up_input_weight if up_input else 0) - (down_input_weight if down_input else 0)
 
 
@@ -57,17 +57,17 @@ class TankInputGenerator(BaseInputGenerator):
 
     def generate_keyboard(self):
         return Input(
-            drive_left = self._bidirectional_input(Keyboard.get_value("w"), Keyboard.get_value("s")),
-            drive_right = self._bidirectional_input(Keyboard.get_value("up_arrow"),
+            drive_left = self._bidi_input(Keyboard.get_value("w"), Keyboard.get_value("s")),
+            drive_right = self._bidi_input(Keyboard.get_value("up_arrow"),
                 Keyboard.get_value("down_arrow")),
             turn = 0,
             # who knows if these keybinds make sense, the peripherals are really meant to be
             # controlled by gamepad...
-            elbow_velocity = self._bidirectional_input(Keyboard.get_value("q"), Keyboard.get_value("a")),
+            elbow_velocity = self._bidi_input(Keyboard.get_value("q"), Keyboard.get_value("a")),
             forearm_goal = (0.75 if Keyboard.get_value("p") else
                 (0 if Keyboard.get_value("u") else None)),
-            forearm_velocity = self._bidirectional_input(Keyboard.get_value("o"), Keyboard.get_value("i")),
-            hand_status = self._bidirectional_input(self._test_button_pressed("e", True),
+            forearm_velocity = self._bidi_input(Keyboard.get_value("o"), Keyboard.get_value("i")),
+            hand_status = self._bidi_input(self._test_button_pressed("e", True),
                 self._test_button_pressed("d", True))
         )
     def generate_gamepad(self):
@@ -90,7 +90,7 @@ class TankInputGenerator(BaseInputGenerator):
             turn = 0,
             elbow_velocity = self._calc_gamepad_elbow_velocity(),
             forearm_goal = None, # TODO: decide on keybinds
-            forearm_velocity = self._bidirectional_input(Gamepad.get_value("button_y"),
+            forearm_velocity = self._bidi_input(Gamepad.get_value("button_y"),
                  Gamepad.get_value("button_a")),
             hand_status = hand_status
         )
@@ -110,15 +110,13 @@ class WeirdInputGenerator(BaseInputGenerator):
         return Input(
             drive_left = drive,
             drive_right = drive,
-            turn = (1 if Keyboard.get_value("d") else 0) - (1 if Keyboard.get_value("a") else 0),
-            elbow_velocity = ((1 if Keyboard.get_value("r") else 0)
-                - (1 if Keyboard.get_value("f") else 0)),
+            turn = self._bidi_input(Keyboard.get_value("d"), Keyboard.get_value("a")),
+            elbow_velocity = self._bidi_input(Keyboard.get_value("r"), Keyboard.get_value("f"))
             forearm_goal = (0.75 if Keyboard.get_value("p") else
                 (0 if Keyboard.get_value("u") else None)),
-            forearm_velocity = ((1 if Keyboard.get_value("o") else 0)
-                - (1 if Keyboard.get_value("i") else 0)),
-            hand_status = ((1 if self._test_button_pressed("t", True) else 0)
-                - (1 if self._test_button_pressed("g", True) else 0))
+            forearm_velocity = self._bidi_input(Keyboard.get_value("o"), Keyboard.get_value("i"))
+            hand_status = self._bidi_input(self._test_button_pressed("t", True),
+                self._test_button_pressed("g", True))
         )
     def generate_gamepad(self):
         drive = Gamepad.get_value("joystick_left_y")
@@ -140,7 +138,7 @@ class WeirdInputGenerator(BaseInputGenerator):
             turn = turn,
             elbow_velocity = self._calc_gamepad_elbow_velocity(),
             forearm_goal = None, # TODO: decide on keybinds
-            forearm_velocity = self._bidirectional_input(Gamepad.get_value("button_y"),
+            forearm_velocity = self._bidi_input(Gamepad.get_value("button_y"),
                  Gamepad.get_value("button_a")),
             hand_status = hand_status
         )
