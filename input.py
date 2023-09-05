@@ -111,10 +111,10 @@ class WeirdInputGenerator(BaseInputGenerator):
             drive_left = drive,
             drive_right = drive,
             turn = self._bidi_input(Keyboard.get_value("d"), Keyboard.get_value("a")),
-            elbow_velocity = self._bidi_input(Keyboard.get_value("r"), Keyboard.get_value("f"))
+            elbow_velocity = self._bidi_input(Keyboard.get_value("r"), Keyboard.get_value("f")),
             forearm_goal = (0.75 if Keyboard.get_value("p") else
                 (0 if Keyboard.get_value("u") else None)),
-            forearm_velocity = self._bidi_input(Keyboard.get_value("o"), Keyboard.get_value("i"))
+            forearm_velocity = self._bidi_input(Keyboard.get_value("o"), Keyboard.get_value("i")),
             hand_status = self._bidi_input(self._test_button_pressed("t", True),
                 self._test_button_pressed("g", True))
         )
