@@ -44,36 +44,64 @@ class Motor:
     def _get(self, key):
         return self._robot.get_value(self._controller, key + "_" + self._motor)
     
+class MotorPair(Motor):
+    __slots__ = "_paired_motor"
+    def __init__(self, robot, debug_logger, controller_id, motor_suffix,
+        paired_controller_id, paired_motor_suffix):
+        super().__init__(robot, debug_logger, controller_id, motor_suffix)
+        self._paired_motor = Motor(robot, debug_logger, paired_controller_id,
+            paired_motor_suffix) #.set_invert(True)
+    def set_invert(self, invert):
+        super().set_invert(invert)
+        #self._paired_motor.set_invert(not invert)
+        self._paired_motor.set_invert(invert)
+        return self
+    def set_deadband(deadband):
+        super().set_deadband(self, deadband)
+        self._paired_motor.set_deadband(deadband)
+        return self
+    def set_pid(self, p, i, d):
+        super().set_pid(p, i, d)
+        self._paired_motor.set_pid(p, i, d)
+        return self
+    def set_velocity(self, velocity):
+        #self._debug_logger.print(f"MotorPair velocity: {velocity}")
+        super().set_velocity(velocity)
+        self._paired_motor.set_velocity(velocity)
+        return self
+
 class Wheel:
     """Represents a wheel that may be ran to a goal position."""
     # goal and radius are in meters
-    __slots__ = "_motor", "_radius", "_ticks_per_rot", "_goal_pos", "_velocity", "_initialized", "_debug_logger"
+    __slots__ = ("_motor", "_radius", "_ticks_per_rot", "_goal_pos", "_velocity", "_debug_logger",
+        "_start_pos")
     def __init__(self, debug_logger, motor, radius, ticks_per_rotation):
         self._motor = motor
         self._radius = radius
         self._ticks_per_rot = ticks_per_rotation
-        self._initialized = False
         self._debug_logger = debug_logger
+        self._start_pos = None
     
     def set_goal(self, goal, velocity):
-        self._initialized = True
+        self._start_pos = self._motor.get_encoder()
         self._goal_pos = math.ceil(goal / (self._radius * 2 * math.pi) * self._ticks_per_rot) 
         self._motor.set_velocity(math.copysign(velocity, self._goal_pos))
         self._velocity = velocity
+    def set_velocity(self, velocity):
+        if self.get_goal_progress() < 1:
+            self._motor.set_velocity(math.copysign(velocity, self._goal_pos))
     def get_goal_progress(self):
-        if not self._initialized:
+        if self._start_pos == None:
             return 0
-        if self._goal_pos == 0:
+        #self._debug_logger.print(f"{self._motor._motor} goal pos: {self._goal_pos} encoder: {self._motor.get_encoder()} start pos: {self._start_pos}")
+        if self._goal_pos == self._start_pos:
             #print("goal progress is 0 for some reason")
             return 1
-        #self._debug_logger.print(self._motor.get_encoder())
-        return 1 - ((self._goal_pos - self._motor.get_encoder()) / self._goal_pos)
+        return (self._motor.get_encoder() - self._start_pos) / (self._goal_pos - self._start_pos)
     def stop(self):
         self._goal_pos = self._motor.get_encoder()
         self._motor.set_velocity(0)
     def update(self):
-        if not self._initialized:
-            return # no commands given yet
         if self.get_goal_progress() >= 1:
             self._motor.set_velocity(0)
 

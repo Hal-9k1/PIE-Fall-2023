@@ -130,7 +130,7 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
                 f"{indent * 4}tb = tb.tb_next",
                 f"{indent * 3}print('\\n'.join(frame_lines))",
                 f"{indent * 3}print(type(e).__name__ + (': ' if str(e) else '') + str(e))",
-                f"{indent * 2}exit()",
+                f"{indent * 3}exit()",
                 f"{indent}return wrapped",
                 f"def _HELPER_translate_line_no(line_no):",
             ]
@@ -140,7 +140,7 @@ def process_file(file_path, indent=" " * 4, module_name=None, module_list=None, 
             for module in module_list:
                 module_line_entries.append(
                     f"{indent}elif line_no >= {running_line_num}:\n"
-                    f"{indent * 2}return ('{module.name}', line_no - {running_line_num + 5})\n"
+                    f"{indent * 2}return '{module.name}', line_no - {running_line_num + 5}\n"
                 )
                 running_line_num += module.body_text.count("\n")
             module_line_entries.append(

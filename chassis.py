@@ -15,8 +15,8 @@ class QueuedMotion:
             self._setup_func()
     def update(self):
         return self._update_func(self._data)
-    def get_update_func(self):
-        return self._update_func
+    def match_update_func(self, update_func):
+        return self._update_func == update_func
     def get_data(self):
         return self._data
 
@@ -28,8 +28,9 @@ class BaseQueuedChassis:
         self._position = starting_position
         self._angle = starting_angle
         self._is_idle = True
-    def move(self, end_pos, angle):
+    def move(self, end_pos, UNUSED_angle):
         """Autonomous mode only. Moves the chassis along a path."""
+        angle = 2 * (self._angle - math.atan2(end_pos[1] - self._position[1], end_pos[0] - self._position[0]))
         self._queue.append(QueuedMotion(self._update_move,
             path.Path(self._position, end_pos, angle)))
         self._position = end_pos
@@ -90,9 +91,10 @@ class TestChassis(BaseQueuedChassis):
     # 12'x16'. this shouldn't matter for the purposes of testing since we don't intend to leave
     # our half of the field.
     __slots__ = ("_motors", "_prev_motor_velocity", "_motion_start_timestamp", "_max_acceleration",
-        "_max_velocity")
+        "_max_velocity", "_wheelspan")
     _robot_types = ("light", "medium", "heavy")
-    _wheelspan = util.inches_to_meters(20)
+    _robot_type_wheelspans = (9.06, 12.39, 8.98)
+    _tick_rate_ms = 50
 
     def __init__(self, robot, debug_logger, starting_position, starting_angle, robot_type):
         super().__init__(debug_logger, starting_position, starting_angle)
@@ -103,26 +105,29 @@ class TestChassis(BaseQueuedChassis):
         if not robot_type in self._robot_types:
             raise ValueError("Invalid robot type.")
         robot_type_num = self._robot_types.index(robot_type) + 3
-        self._max_acceleration = util.inches_to_meters((8 - robot_type_num) / 5 * 0.05413) # knowing PIE this is probably in inches/sec^2
-        self._max_velocity = util.inches_to_meters(robot_type_num / 5 * 1.236) # same above
+        self._max_acceleration = util.inches_to_meters((8 - robot_type_num) / 5 * 0.05413) * (1000 / self._tick_rate_ms) # knowing PIE this is probably in inches/sec^2
+        self._max_velocity = util.inches_to_meters(robot_type_num / 5 * 1.236) * (1000 / self._tick_rate_ms) # same above
+        print(f"max accel: {self._max_acceleration} max vel: {self._max_velocity}")
+        self._wheelspan = util.inches_to_meters(
+            self._robot_type_wheelspans[self._robot_types.index(robot_type)])
         self._prev_motor_velocity = util.LRStruct(0, 0)
     def update_input(self, input):
         self._motors.left.set_velocity(input.drive.left + input.turn)
         self._motors.right.set_velocity(input.drive.right - input.turn)
 
     def _on_start_new_motion(self, motion):
-        self._motion_start_timestamp = 0
+        self._motion_start_timestamp = time.time()
     def _on_queue_finish(self):
         # might be redundant
         self._motors.left.set_velocity(0)
         self._motors.right.set_velocity(0)
     def _on_post_update(self):
         pass
-    def _get_move_wheel_dists(self, path):
+    def _calculate_move(self, path):
         left_dist = path.get_offset_length(self._wheelspan / 2)
         right_dist = path.get_offset_length(-self._wheelspan / 2)
         return (left_dist, right_dist)
-    def _get_turn_wheel_dists(self, angle):
+    def _calculate_turn(self, angle):
         goal_dist = angle / self._wheelspan / 2
         left_dist = math.copysign(goal_dist, angle)
         right_dist = -math.copysign(goal_dist, angle)
@@ -131,13 +136,13 @@ class TestChassis(BaseQueuedChassis):
         left_dist = 0
         right_dist = 0
         for motion in motion_list:
-            if motion.get_update_func() == self._update_move:
-                get_wheel_dists = self._get_move_wheel_dists
-            elif motion.get_update_func() == self._update_turn:
-                get_wheel_dists = self._get_turn_wheel_dists
-            elif motion.get_update_func() == self._update_peripheral:
-                get_wheel_dists = lambda: (0, 0)
-            wheel_dists = get_wheel_dists(motion.get_data())
+            if motion.match_update_func(self._update_move):
+                calc_func = self._calculate_move
+            elif motion.match_update_func(self._update_turn):
+                calc_func = self._calculate_turn
+            elif motion.match_update_func(self._update_peripheral):
+                calc_func = lambda: (0, 0)
+            wheel_dists = calc_func(motion.get_data())
             left_dist += wheel_dists[0]
             right_dist += wheel_dists[1]
         return (left_dist, right_dist)
@@ -158,27 +163,27 @@ class TestChassis(BaseQueuedChassis):
         progress = min(1, elapsed * self._max_acceleration / delta)
         return prev_velocity + progress * delta
     def _update_move(self, path):
-        return self._update_motors(*self._get_move_wheel_dists(path))
+        return self._update_motors(*self._calculate_move(path))
     def _update_turn(self, angle):
-        return self._update_motors(*self._get_turn_wheel_dists(angle))
+        return self._update_motors(*self._calculate_turn(angle))
     def _update_peripheral(self, peripheral):
         return peripheral.update()
     def _update_motors(self, left_dist, right_dist):
-        # TODO: what if max velocity is too high for the last motion? or the second to last? just
-        # checking whether we're on the last queued motion isn't enough.
-        if len(self._queue) == 1:
-            should_deaccelerate = True
-        else:
-            future_motor_dists = self._sum_wheel_dists(self._queue[1:])
-            min_dist_idx = 0 if future_motor_dists[0] < future_motor_dists[1] else 1
-            should_deaccelerate = not self._can_deaccelerate_before_dist(
-                self._get_actual_motor_velocity(min_dist_idx), future_motor_dists[min_dist_idx])
+        #if len(self._queue) == 1:
+        #    should_deaccelerate = True
+        #else:
+        #    future_motor_dists = self._sum_wheel_dists(self._queue[1:])
+        #    min_dist_idx = 0 if future_motor_dists[0] < future_motor_dists[1] else 1
+        #    should_deaccelerate = not self._can_deaccelerate_before_dist(
+        #        self._get_actual_motor_velocity(min_dist_idx), future_motor_dists[min_dist_idx])
+        should_deaccelerate = False # TODO: why
         (left_deacc_time, left_finish_time) = self._estimate_travel_time(
             self._get_actual_motor_velocity(0), left_dist, should_deaccelerate)
         (right_deacc_time, right_finish_time) = self._estimate_travel_time(
             self._get_actual_motor_velocity(1), right_dist, should_deaccelerate)
         elapsed = time.time() - self._motion_start_timestamp
-        self._debug_logger.print(f"left_deacc_time = {left_deacc_time} left_finish_time = {left_finish_time}"
+        self._debug_logger.print(f"left actual velocity = {self._get_actual_motor_velocity(0)} right actual velocity"
+            f" = {self._get_actual_motor_velocity(1)} left_deacc_time = {left_deacc_time} left_finish_time = {left_finish_time}"
             f"\nright_deacc_time = {right_deacc_time} right_finish_time = {right_finish_time} elapsed = {elapsed}"
             f"\nleft_dist = {left_dist} right_dist = {right_dist}")
         if elapsed > min(left_deacc_time, right_deacc_time):
@@ -224,12 +229,12 @@ class QuadChassis(BaseQueuedChassis):
     __slots__ = "_motors", "_wheels"
     _wheelspan = util.inches_to_meters(14.5)
     _drive_controller_id = "6_10833107448071795766"
-    _ticks_per_rotation = 64 * 30.125 / 1.42 # 30.125 probably a gear ratio, 1.42 magic number
+    _ticks_per_rotation = 475 #64 * 30.125 / 1.42 # 30.125 probably a gear ratio, 1.42 magic number
     def __init__(self, robot, debug_logger, starting_position, starting_angle):
         super().__init__(debug_logger, starting_position, starting_angle)
         self._motors = util.LRStruct(
             left = (devices.Motor(robot, debug_logger, self._drive_controller_id, "b")
-                .set_pid(None, None, None).set_invert(False)), # TODO: should maybe be False
+                .set_pid(None, None, None).set_invert(False)),
             right = (devices.Motor(robot, debug_logger, self._drive_controller_id, "a")
                 .set_pid(None, None, None).set_invert(True))
         )
@@ -248,28 +253,44 @@ class QuadChassis(BaseQueuedChassis):
     def _on_start_new_motion(self, motion):
         self._motors.left.reset_encoder()
         self._motors.right.reset_encoder()
+        if motion.match_update_func(self._update_move):
+            calc_func = self._calculate_move
+        elif motion.match_update_func(self._update_turn):
+            calc_func = self._calculate_turn
+        elif motion.match_update_func(self._update_peripheral):
+            calc_func = lambda: (0, 0)
+        left_dist, right_dist = calc_func(motion.get_data())
+        max_abs_dist = max(abs(left_dist), abs(right_dist)) or 1 # don't divide by 0
+        self._wheels.left.set_goal(left_dist, left_dist / max_abs_dist)
+        self._wheels.right.set_goal(right_dist, right_dist / max_abs_dist)
     def _on_queue_finish(self):
         self._wheels.left.stop()
         self._wheels.right.stop()
     def _on_post_update(self):
         self._wheels.left.update()
         self._wheels.right.update()
-    def _update_move(self, path):
+    def _calculate_move(self, path):
         left_dist = path.get_offset_length(self._wheelspan / 2)
         right_dist = path.get_offset_length(-self._wheelspan / 2)
-        return self._update_motors(left_dist, right_dist)
-    def _update_turn(self, angle):
+        return left_dist, right_dist
+    def _update_move(self, path):
+        return self._update_motors(*self._calculate_move(path))
+    def _calculate_turn(self, angle):
         goal_dist = angle / self._wheelspan / 2
         left_dist = math.copysign(goal_dist, angle)
         right_dist = -math.copysign(goal_dist, angle)
-        return self._update_motors(left_dist, right_dist)
+        return left_dist, right_dist
+    def _update_turn(self, angle):
+        return self._update_motors(*self._calculate_turn(angle))
     def _update_motors(self, left_dist, right_dist):
         max_abs_dist = max(abs(left_dist), abs(right_dist))
-        self._wheels.left.set_goal(left_dist, left_dist / max_abs_dist)
-        self._wheels.right.set_goal(right_dist, right_dist / max_abs_dist)
         left_progress = self._wheels.left.get_goal_progress()
         right_progress = self._wheels.right.get_goal_progress()
-        self._debug_logger.print(f"left_dist: {left_dist} right_dist: {right_dist} left_progress: {left_progress} right_progress: {right_progress}")
+        # TODO: balance velocities using progress
+        self._wheels.left.set_velocity(left_dist / max_abs_dist)
+        self._wheels.right.set_velocity(right_dist / max_abs_dist)
+        self._debug_logger.print(f"left_dist: {left_dist} right_dist: {right_dist} left_progress: "
+            f"{left_progress} right_progress: {right_progress}")
         return min(left_progress, right_progress) < 1
     def _update_peripheral(self, peripheral):
         return peripheral.update()

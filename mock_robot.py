@@ -77,7 +77,7 @@ class MockRobot:
     def _update_koalabear(self, device_id):
         device = self._devices[device_id]
         timestamp = time.time()
-        dt = device["_LAST_UPDATED"] - timestamp
+        dt = timestamp - device["_LAST_UPDATED"]
         device["_LAST_UPDATED"] = timestamp
         if abs(device["velocity_a"]) > 1:
             raise ValueError("Koalabear velocity a is out of bounds.")
